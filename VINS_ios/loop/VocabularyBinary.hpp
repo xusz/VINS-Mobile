@@ -45,7 +45,8 @@ struct Vocabulary {
     void serialize(std::ofstream& stream);
     void deserialize(std::ifstream& stream);
     
-    inline static size_t staticDataSize() {
+    inline static size_t staticDataSize()
+    {
         return sizeof(Vocabulary) - sizeof(Node*) - sizeof(Word*);
     }
 };

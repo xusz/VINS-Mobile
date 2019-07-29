@@ -34,58 +34,71 @@ public:
     void resample(vector<int> &erase_index);
     void erase(KeyFrame* pKF);
     int size();
-    void optimize4DoFLoopPoseGraph(int cur_index, Eigen::Vector3d &loop_correct_t, Eigen::Matrix3d &loop_correct_r);
+    
+    void optimize4DoFLoopPoseGraph(int cur_index,
+                                   Eigen::Vector3d &loop_correct_t,
+                                   Eigen::Matrix3d &loop_correct_r);
+    
     KeyFrame* getKeyframe(int index);
     KeyFrame* getLastKeyframe();
     KeyFrame* getLastKeyframe(int last_index);
     KeyFrame* getLastUncheckKeyframe();
+    
     void updateVisualization();
     void addLoop(int loop_index);
     
     vector<Vector3f> refine_path;
     vector<KEYFRAME_DATA> all_keyframes;
     vector<int> segment_indexs;
-    int max_seg_index, cur_seg_index;
+    int max_seg_index;
+    int cur_seg_index;
     
 private:
     list<KeyFrame*> keyFrameList;
     std::mutex mMutexkeyFrameList;
+    
     int earliest_loop_index;
+    
     Vector3d t_drift;
     double yaw_drift;
     Matrix3d r_drift;
+    
     int max_frame_num;
     double total_length;
     Vector3d last_P;
 };
 
 template <typename T>
-T NormalizeAngle(const T& angle_degrees) {
+T NormalizeAngle(const T& angle_degrees)
+{
     T two_pi(2.0 * 180);
     
     if (angle_degrees > T(0))
-        return angle_degrees -
-        two_pi * ceres::floor((angle_degrees + T(180)) / two_pi);
+    {
+        return angle_degrees - two_pi * ceres::floor((angle_degrees + T(180)) / two_pi);
+    }
     else
-        return angle_degrees +
-        two_pi * ceres::floor((-angle_degrees + T(180)) / two_pi);
+    {
+        return angle_degrees + two_pi * ceres::floor((-angle_degrees + T(180)) / two_pi);
+    }
 };
 
 class AngleLocalParameterization {
 public:
     
     template <typename T>
-    bool operator()(const T* theta_radians, const T* delta_theta_radians,
-                    T* theta_radians_plus_delta) const {
-        *theta_radians_plus_delta =
-        NormalizeAngle(*theta_radians + *delta_theta_radians);
+    bool operator()(const T* theta_radians,
+                    const T* delta_theta_radians,
+                    T* theta_radians_plus_delta) const
+    {
+        *theta_radians_plus_delta = NormalizeAngle(*theta_radians + *delta_theta_radians);
         
         return true;
     }
     
-    static ceres::LocalParameterization* Create() {
-        return (new ceres::AutoDiffLocalParameterization<AngleLocalParameterization,
-                1, 1>);
+    static ceres::LocalParameterization* Create()
+    {
+        return (new ceres::AutoDiffLocalParameterization<AngleLocalParameterization, 1, 1>);
     }
 };
 
@@ -101,10 +114,17 @@ void QuaternionInverse(const T q[4], T q_inverse[4])
 struct RelativeTError
 {
     RelativeTError(double t_x, double t_y, double t_z)
-    :t_x(t_x), t_y(t_y), t_z(t_z){}
+                : t_x(t_x),
+                  t_y(t_y),
+                  t_z(t_z)
+    {
+    }
     
     template <typename T>
-    bool operator()(const T* const w_q_i, const T* ti, const T* tj, T* residuals) const
+    bool operator()(const T* const w_q_i,
+                    const T* ti,
+                    const T* tj,
+                    T* residuals) const
     {
         T t_w_ij[3];
         t_w_ij[0] = tj[0] - ti[0];
@@ -124,22 +144,26 @@ struct RelativeTError
         return true;
     }
     
-    static ceres::CostFunction* Create(const double t_x, const double t_y, const double t_z)
+    static ceres::CostFunction* Create(const double t_x,
+                                       const double t_y,
+                                       const double t_z)
     {
-        return (new ceres::AutoDiffCostFunction<
-                RelativeTError, 3, 4, 3, 3>(
-                                            new RelativeTError(t_x, t_y, t_z)));
+        return (new ceres::AutoDiffCostFunction<RelativeTError, 3, 4, 3, 3>
+                                        (new RelativeTError(t_x, t_y, t_z)));
     }
     
     double t_x, t_y, t_z;
-    
 };
 
 
 struct TError
 {
     TError(double t_x, double t_y, double t_z)
-    :t_x(t_x), t_y(t_y), t_z(t_z){}
+        : t_x(t_x),
+          t_y(t_y),
+          t_z(t_z)
+    {
+    }
     
     template <typename T>
     bool operator()(const T* tj, T* residuals) const
@@ -151,27 +175,32 @@ struct TError
         return true;
     }
     
-    static ceres::CostFunction* Create(const double t_x, const double t_y, const double t_z)
+    static ceres::CostFunction* Create(const double t_x,
+                                       const double t_y,
+                                       const double t_z)
     {
-        return (new ceres::AutoDiffCostFunction<
-                TError, 3, 3>(
-                              new TError(t_x, t_y, t_z)));
+        return (new ceres::AutoDiffCostFunction<TError, 3, 3>
+                                (new TError(t_x, t_y, t_z)) );
     }
     
-    double t_x, t_y, t_z;
-    
+    double t_x;
+    double t_y;
+    double t_z;
 };
 
 struct RelativeRTError
 {
-    RelativeRTError(double t_x, double t_y, double t_z, double q_w, double q_x, double q_y, double q_z)
-    :t_x(t_x), t_y(t_y), t_z(t_z), q_w(q_w), q_x(q_x), q_y(q_y), q_z(q_z)
+    RelativeRTError(double t_x, double t_y, double t_z,
+                    double q_w, double q_x, double q_y, double q_z)
+                  : t_x(t_x), t_y(t_y), t_z(t_z),
+                    q_w(q_w), q_x(q_x), q_y(q_y), q_z(q_z)
     {
         t_norm = sqrt(t_x * t_x + t_y * t_y + t_z * t_z);
     }
     
     template <typename T>
-    bool operator()(const T* const w_q_i, const T* ti, const T* w_q_j, const T* tj, T* residuals) const
+    bool operator()(const T* const w_q_i, const T* ti,
+                    const T* w_q_j, const T* tj, T* residuals) const
     {
         T t_w_ij[3];
         t_w_ij[0] = tj[0] - ti[0];
@@ -184,9 +213,9 @@ struct RelativeRTError
         T t_i_ij[3];
         ceres::QuaternionRotatePoint(i_q_w, t_w_ij, t_i_ij);
         
-        //residuals[0] = (t_i_ij[0] - T(t_x)) / T(t_norm);
-        //residuals[1] = (t_i_ij[1] - T(t_y)) / T(t_norm);
-        //residuals[2] = (t_i_ij[2] - T(t_z)) / T(t_norm);
+        // residuals[0] = (t_i_ij[0] - T(t_x)) / T(t_norm);
+        // residuals[1] = (t_i_ij[1] - T(t_y)) / T(t_norm);
+        // residuals[2] = (t_i_ij[2] - T(t_z)) / T(t_norm);
         residuals[0] = (t_i_ij[0] - T(t_x));
         residuals[1] = (t_i_ij[1] - T(t_y));
         residuals[2] = (t_i_ij[2] - T(t_z));
@@ -213,17 +242,27 @@ struct RelativeRTError
         return true;
     }
     
-    static ceres::CostFunction* Create(const double t_x, const double t_y, const double t_z,
-                                       const double q_w, const double q_x, const double q_y, const double q_z)
+    static ceres::CostFunction* Create(const double t_x,
+                                       const double t_y,
+                                       const double t_z,
+                                       const double q_w,
+                                       const double q_x,
+                                       const double q_y,
+                                       const double q_z)
     {
-        return (new ceres::AutoDiffCostFunction<
-                RelativeRTError, 6, 4, 3, 4, 3>(
-                                                new RelativeRTError(t_x, t_y, t_z, q_w, q_x, q_y, q_z)));
+        return (new ceres::AutoDiffCostFunction<RelativeRTError, 6, 4, 3, 4, 3>
+                        (new RelativeRTError(t_x, t_y, t_z, q_w, q_x, q_y, q_z)));
     }
     
-    double t_x, t_y, t_z, t_norm;
-    double q_w, q_x, q_y, q_z;
+    double t_x;
+    double t_y;
+    double t_z;
+    double t_norm;
     
+    double q_w;
+    double q_x;
+    double q_y;
+    double q_z;
 };
 
 template <typename T>
@@ -270,11 +309,18 @@ void RotationMatrixRotatePoint(const T R[9], const T t[3], T r_t[3])
 
 struct FourDOFError
 {
-    FourDOFError(double t_x, double t_y, double t_z, double relative_yaw, double pitch_i, double roll_i)
-    :t_x(t_x), t_y(t_y), t_z(t_z), relative_yaw(relative_yaw), pitch_i(pitch_i), roll_i(roll_i){}
+    FourDOFError(double t_x, double t_y, double t_z,
+                 double relative_yaw, double pitch_i, double roll_i)
+               : t_x(t_x), t_y(t_y), t_z(t_z),
+                 relative_yaw(relative_yaw),
+                 pitch_i(pitch_i),
+                 roll_i(roll_i)
+    {
+    }
     
     template <typename T>
-    bool operator()(const T* const yaw_i, const T* ti, const T* yaw_j, const T* tj, T* residuals) const
+    bool operator()(const T* const yaw_i, const T* ti,
+                    const T* yaw_j, const T* tj, T* residuals) const
     {
         T t_w_ij[3];
         t_w_ij[0] = tj[0] - ti[0];
@@ -284,9 +330,11 @@ struct FourDOFError
         // euler to rotation
         T w_R_i[9];
         YawPitchRollToRotationMatrix(yaw_i[0], T(pitch_i), T(roll_i), w_R_i);
+        
         // rotation transpose
         T i_R_w[9];
         RotationMatrixTranspose(w_R_i, i_R_w);
+        
         // rotation matrix rotate point
         T t_i_ij[3];
         RotationMatrixRotatePoint(i_R_w, t_w_ij, t_i_ij);
@@ -299,28 +347,41 @@ struct FourDOFError
         return true;
     }
     
-    static ceres::CostFunction* Create(const double t_x, const double t_y, const double t_z,
-                                       const double relative_yaw, const double pitch_i, const double roll_i)
+    static ceres::CostFunction* Create(const double t_x,
+                                       const double t_y,
+                                       const double t_z,
+                                       const double relative_yaw,
+                                       const double pitch_i,
+                                       const double roll_i)
     {
-        return (new ceres::AutoDiffCostFunction<
-                FourDOFError, 4, 1, 3, 1, 3>(
-                                             new FourDOFError(t_x, t_y, t_z, relative_yaw, pitch_i, roll_i)));
+        return (new ceres::AutoDiffCostFunction<FourDOFError, 4, 1, 3, 1, 3>
+                (new FourDOFError(t_x, t_y, t_z, relative_yaw, pitch_i, roll_i)));
     }
     
-    double t_x, t_y, t_z;
-    double relative_yaw, pitch_i, roll_i;
+    double t_x;
+    double t_y;
+    double t_z;
     
+    double relative_yaw;
+    double pitch_i;
+    double roll_i;
 };
 
 struct FourDOFWeightError
 {
-    FourDOFWeightError(double t_x, double t_y, double t_z, double relative_yaw, double pitch_i, double roll_i)
-    :t_x(t_x), t_y(t_y), t_z(t_z), relative_yaw(relative_yaw), pitch_i(pitch_i), roll_i(roll_i){
+    FourDOFWeightError(double t_x, double t_y, double t_z,
+                       double relative_yaw, double pitch_i, double roll_i)
+                    : t_x(t_x), t_y(t_y), t_z(t_z),
+                      relative_yaw(relative_yaw),
+                      pitch_i(pitch_i),
+                      roll_i(roll_i)
+    {
         weight = 10;
     }
     
     template <typename T>
-    bool operator()(const T* const yaw_i, const T* ti, const T* yaw_j, const T* tj, T* residuals) const
+    bool operator()(const T* const yaw_i, const T* ti,
+                    const T* yaw_j, const T* tj, T* residuals) const
     {
         T t_w_ij[3];
         t_w_ij[0] = tj[0] - ti[0];
@@ -330,9 +391,11 @@ struct FourDOFWeightError
         // euler to rotation
         T w_R_i[9];
         YawPitchRollToRotationMatrix(yaw_i[0], T(pitch_i), T(roll_i), w_R_i);
+        
         // rotation transpose
         T i_R_w[9];
         RotationMatrixTranspose(w_R_i, i_R_w);
+        
         // rotation matrix rotate point
         T t_i_ij[3];
         RotationMatrixRotatePoint(i_R_w, t_w_ij, t_i_ij);
@@ -345,17 +408,26 @@ struct FourDOFWeightError
         return true;
     }
     
-    static ceres::CostFunction* Create(const double t_x, const double t_y, const double t_z,
-                                       const double relative_yaw, const double pitch_i, const double roll_i)
+    static ceres::CostFunction* Create(const double t_x,
+                                       const double t_y,
+                                       const double t_z,
+                                       const double relative_yaw,
+                                       const double pitch_i,
+                                       const double roll_i)
     {
-        return (new ceres::AutoDiffCostFunction<
-                FourDOFWeightError, 4, 1, 3, 1, 3>(
-                                                   new FourDOFWeightError(t_x, t_y, t_z, relative_yaw, pitch_i, roll_i)));
+        return (new ceres::AutoDiffCostFunction<FourDOFWeightError, 4, 1, 3, 1, 3>
+                (new FourDOFWeightError(t_x, t_y, t_z, relative_yaw, pitch_i, roll_i)));
     }
     
-    double t_x, t_y, t_z;
-    double relative_yaw, pitch_i, roll_i;
-    double weight;
+    double t_x;
+    double t_y;
+    double t_z;
     
+    double relative_yaw;
+    double pitch_i;
+    double roll_i;
+    double weight;
 };
+
 #endif /* keyfame_database_hpp */
+

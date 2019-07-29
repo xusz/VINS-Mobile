@@ -50,10 +50,11 @@ struct GroundPoint
 class DrawResult
 {
 public:
-    DrawResult(float _pitch, float _roll, float _yaw, float _Tx, float _Ty, float _Tz);
+    DrawResult(float _pitch, float _roll, float _yaw,
+               float _Tx, float _Ty, float _Tz);
     
-    float roll, pitch, yaw; //in degree
-    float Tx, Ty, Tz; //in meters, only in z axis
+    float roll, pitch, yaw; // in degree
+    float Tx, Ty, Tz;       // in meters, only in z axis
     float radius, radiusAR;
     float theta, phy;
     float thetaAR, phyAR;
@@ -69,7 +70,6 @@ public:
     float locationLongPressY;
     bool longPressFlag;
     
-    
     float theta_p, phy_p, radius_p;
     float X0_p, Y0_p;
     int finger_state;
@@ -82,8 +82,6 @@ public:
     vector<GroundPoint> Grounds;
     
     int Ground_idx;
-    
-    
     
     float lengthCube;
     vector<Vector3f> pose;
@@ -100,7 +98,6 @@ public:
     Vector3f origin_w;
     float X0, Y0;
     float X0AR, Y0AR;
-    
     
     bool look_down;
     //for optical flow EKF
@@ -119,21 +116,50 @@ public:
     vector<Vector2f> pre_status, cur_status;
     vector<Matrix2f> K;
     vector<Matrix2f> cur_cov, pre_cov;
+    
     void computeAR(vector<Vector3f> &point_cloud, Vector3f &model);
     
-    void drawAR(cv::Mat &result, vector<Vector3f> &point_cloud, Vector3f P_latest, Matrix3f R_latest);
-    void drawGround(cv::Mat &result, vector<Vector3f> &point_cloud, Vector3f P_latest, Matrix3f R_latest);
-    void drawBox(cv::Mat &result, Vector3f corner_0, Vector3f corner_x, Vector3f corner_y, Vector3f corner_z, float size, Vector3f P_latest, Matrix3f R_latest, bool inAR);
-    void Reprojection(cv::Mat &result, vector<Vector3f> &point_cloud, const Matrix3f *R_window,const Vector3f *T_window, bool box_in_trajectory);
-    vector<Vector3f> calculate_camera_pose(Vector3f camera_center, Matrix3f Rc, float length);
+    void drawAR(cv::Mat &result,
+                vector<Vector3f> &point_cloud,
+                Vector3f P_latest,
+                Matrix3f R_latest);
+    
+    void drawGround(cv::Mat &result,
+                    vector<Vector3f> &point_cloud,
+                    Vector3f P_latest,
+                    Matrix3f R_latest);
+    
+    void drawBox(cv::Mat &result,
+                 Vector3f corner_0,
+                 Vector3f corner_x,
+                 Vector3f corner_y,
+                 Vector3f corner_z,
+                 float size,
+                 Vector3f P_latest,
+                 Matrix3f R_latest,
+                 bool inAR);
+    
+    void Reprojection(cv::Mat &result,
+                      vector<Vector3f> &point_cloud,
+                      const Matrix3f *R_window,
+                      const Vector3f *T_window,
+                      bool box_in_trajectory);
+    
+    vector<Vector3f> calculate_camera_pose(Vector3f camera_center,
+                                           Matrix3f Rc,
+                                           float length);
+    
     cv::Point2f World2VirturCam(Eigen::Vector3f xyz, float &depth);
+    
     void drawBoxVirturCam(cv::Mat &result);
     void rejectWithF();
     cv::Scalar newColor();
+    
 private:
     Vector3f findZfromXY(Vector3f point, Vector4f plane);
     Vector4f findPlane(vector<Vector3f> &point_cloud);
-    Vector3f findGround(vector<Vector3f> &point_cloud, vector<Vector3f> &inlier_points);
+    Vector3f findGround(vector<Vector3f> &point_cloud,
+                        vector<Vector3f> &inlier_points);
 };
 
 #endif /* draw_result_hpp */

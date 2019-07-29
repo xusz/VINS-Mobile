@@ -66,8 +66,7 @@ namespace DLoopDetector
 #include "FBrief.h"
 
 /// BRIEF Loop Detector
-typedef DLoopDetector::TemplatedLoopDetector
-  <FBrief::TDescriptor, FBrief> BriefLoopDetector;
+typedef DLoopDetector::TemplatedLoopDetector<FBrief::TDescriptor, FBrief> BriefLoopDetector;
 
 #endif
 

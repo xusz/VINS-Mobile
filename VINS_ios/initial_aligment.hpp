@@ -23,10 +23,14 @@ using namespace std;
 class ImageFrame
 {
 public:
-    ImageFrame(){};
-    ImageFrame(const map<int, Vector3d>& _points, double _t):points{_points},t{_t},is_key_frame{false}
+    ImageFrame() {};
+    ImageFrame(const map<int, Vector3d>& _points, double _t)
+            : points{_points},
+              t{_t},
+              is_key_frame{false}
     {
     };
+    
     map<int, Vector3d> points;
     double t;
     Matrix3d R;
@@ -35,6 +39,7 @@ public:
     bool is_key_frame;
 };
 
-bool VisualIMUAlignment(map<double, ImageFrame> &all_image_frame, Vector3d* Bgs, Vector3d &g, VectorXd &x);
+bool VisualIMUAlignment(map<double, ImageFrame> &all_image_frame,
+                        Vector3d* Bgs, Vector3d &g, VectorXd &x);
 
 #endif /* initial_aligment_hpp */

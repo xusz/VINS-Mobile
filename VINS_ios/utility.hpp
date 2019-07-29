@@ -26,6 +26,7 @@ public:
         Eigen::Quaternion<Scalar_t> dq;
         Eigen::Matrix<Scalar_t, 3, 1> half_theta = theta;
         half_theta /= static_cast<Scalar_t>(2.0);
+        
         dq.w() = static_cast<Scalar_t>(1.0);
         dq.x() = half_theta.x();
         dq.y() = half_theta.y();
@@ -38,8 +39,8 @@ public:
     {
         Eigen::Matrix<typename Derived::Scalar, 3, 3> ans;
         ans << typename Derived::Scalar(0), -q(2), q(1),
-        q(2), typename Derived::Scalar(0), -q(0),
-        -q(1), q(0), typename Derived::Scalar(0);
+                q(2), typename Derived::Scalar(0), -q(0),
+                -q(1), q(0), typename Derived::Scalar(0);
         return ans;
     }
     
@@ -58,8 +59,11 @@ public:
     {
         Eigen::Quaternion<typename Derived::Scalar> qq = positify(q);
         Eigen::Matrix<typename Derived::Scalar, 4, 4> ans;
-        ans(0, 0) = qq.w(), ans.template block<1, 3>(0, 1) = -qq.vec().transpose();
-        ans.template block<3, 1>(1, 0) = qq.vec(), ans.template block<3, 3>(1, 1) = qq.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity() + skewSymmetric(qq.vec());
+        ans(0, 0) = qq.w();
+        ans.template block<1, 3>(0, 1) = -qq.vec().transpose();
+        ans.template block<3, 1>(1, 0) = qq.vec();
+        ans.template block<3, 3>(1, 1) = qq.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity()
+                                        + skewSymmetric(qq.vec());
         return ans;
     }
     
@@ -68,8 +72,11 @@ public:
     {
         Eigen::Quaternion<typename Derived::Scalar> pp = positify(p);
         Eigen::Matrix<typename Derived::Scalar, 4, 4> ans;
-        ans(0, 0) = pp.w(), ans.template block<1, 3>(0, 1) = -pp.vec().transpose();
-        ans.template block<3, 1>(1, 0) = pp.vec(), ans.template block<3, 3>(1, 1) = pp.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity() - skewSymmetric(pp.vec());
+        ans(0, 0) = pp.w();
+        ans.template block<1, 3>(0, 1) = -pp.vec().transpose();
+        ans.template block<3, 1>(1, 0) = pp.vec();
+        ans.template block<3, 3>(1, 1) = pp.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity()
+                                        - skewSymmetric(pp.vec());
         return ans;
     }
     
@@ -82,7 +89,9 @@ public:
         Eigen::Vector3d ypr(3);
         double y = atan2(n(1), n(0));
         double p = atan2(-n(2), n(0) * cos(y) + n(1) * sin(y));
-        double r = atan2(a(0) * sin(y) - a(1) * cos(y), -o(0) * sin(y) + o(1) * cos(y));
+        double r = atan2(a(0) * sin(y) - a(1) * cos(y),
+                         -o(0) * sin(y) + o(1) * cos(y));
+        
         ypr(0) = y;
         ypr(1) = p;
         ypr(2) = r;
@@ -91,7 +100,8 @@ public:
     }
     
     template <typename Derived>
-    static Eigen::Matrix<typename Derived::Scalar, 3, 3> ypr2R(const Eigen::MatrixBase<Derived> &ypr)
+    static Eigen::Matrix<typename Derived::Scalar, 3, 3> ypr2R(
+                                    const Eigen::MatrixBase<Derived> &ypr)
     {
         typedef typename Derived::Scalar Scalar_t;
         
@@ -100,19 +110,19 @@ public:
         Scalar_t r = ypr(2) / 180.0 * M_PI;
         
         Eigen::Matrix<Scalar_t, 3, 3> Rz;
-        Rz << cos(y), -sin(y), 0,
-        sin(y), cos(y), 0,
-        0, 0, 1;
+        Rz << cos(y), -sin(y),  0,
+              sin(y),  cos(y),  0,
+              0,       0,       1;
         
         Eigen::Matrix<Scalar_t, 3, 3> Ry;
         Ry << cos(p), 0., sin(p),
-        0., 1., 0.,
-        -sin(p), 0., cos(p);
+              0.,     1., 0.,
+             -sin(p), 0., cos(p);
         
         Eigen::Matrix<Scalar_t, 3, 3> Rx;
-        Rx << 1., 0., 0.,
-        0., cos(r), -sin(r),
-        0., sin(r), cos(r);
+        Rx << 1.,  0.,      0.,
+              0.,  cos(r), -sin(r),
+              0.,  sin(r),  cos(r);
         
         return Rz * Ry * Rx;
     }
@@ -140,23 +150,24 @@ public:
     static Eigen::Vector3d Vins2Unity(const Eigen::Vector3d &v)
     {
         static Eigen::Matrix3d initR;
-        initR << 0,  0,  -1.0,
-        0.0,  1.0,  0.0,
-        1.0,  0.0,  0.0;
+        initR << 0,    0,   -1.0,
+                 0.0,  1.0,  0.0,
+                 1.0,  0.0,  0.0;
         
         Eigen::Vector3d P_refine = initR.transpose()*v;
         Eigen::Vector3d position;
-        position  << -P_refine.y(),
+        position << -P_refine.y(),
                      P_refine.x(),
                     -P_refine.z();
         return position;
     }
+    
     static Eigen::Quaterniond Vins2Unity(const Eigen::Quaterniond &q)
     {
         static Eigen::Matrix3d initR;
-        initR << 0,  0,  -1.0,
-        0.0,  1.0,  0.0,
-        1.0,  0.0,  0.0;
+        initR << 0,    0,   -1.0,
+                 0.0,  1.0,  0.0,
+                 1.0,  0.0,  0.0;
         
         Eigen::Quaterniond Q_refine(initR.transpose()*q.toRotationMatrix());
         Eigen::Quaterniond rotation;
@@ -167,16 +178,21 @@ public:
         
         return rotation;
     }
+    
     template <typename T>
-    static T normalizeAngle(const T& angle_degrees) {
+    static T normalizeAngle(const T& angle_degrees)
+    {
         T two_pi(2.0 * 180);
         if (angle_degrees > 0)
-            return angle_degrees -
-            two_pi * std::floor((angle_degrees + T(180)) / two_pi);
+        {
+            return angle_degrees - two_pi * std::floor((angle_degrees + T(180)) / two_pi);
+        }
         else
-            return angle_degrees +
-            two_pi * std::floor((-angle_degrees + T(180)) / two_pi);
+        {
+            return angle_degrees + two_pi * std::floor((-angle_degrees + T(180)) / two_pi);
+        }
     };
 };
 
 #endif /* utility_hpp */
+

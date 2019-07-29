@@ -21,7 +21,7 @@
 #include "keyfame_database.h"
 #import <sys/utsname.h>
 
-@interface ViewController : UIViewController<CvVideoCameraDelegate,UITextViewDelegate>
+@interface ViewController : UIViewController<CvVideoCameraDelegate, UITextViewDelegate>
 {
     CvVideoCamera* videoCamera;
     BOOL isCapturing;
@@ -29,9 +29,9 @@
     cv::Size frameSize;
     uint64_t prevTime;
     NSCondition *_condition;
-    NSThread *mainLoop;
-    NSThread *draw;
-    NSThread *saveData;
+    NSThread *mainLoop_thread;  // 是负责IMU数据与图像数据融合的主要部分
+    NSThread *draw_thread;
+    NSThread *saveData_thread;
     NSThread *loop_thread;
     NSThread *globalLoopThread;
     UITextView *textY;

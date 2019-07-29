@@ -9,6 +9,8 @@
 #ifndef global_param_h
 #define global_param_h
 
+#define DEBUG_MODE  false
+
 enum DeviceType
 {
     iPhone5s,
@@ -21,38 +23,48 @@ enum DeviceType
     iPadPro129,
     unDefine
 };
-//extrinsic param
-#define RIC_y ((double)0.0)
-#define RIC_p ((double)0.0)
-#define RIC_r ((double)180.0)
-#define MIN_LOOP_NUM 22
-#define LOOP_FREQ 3
-#define WINDOW_SIZE 10
-#define PNP_SIZE 6
-#define SIZE_POSE 7
+
+// extrinsic param
+#define RIC_y  ((double)0.0)
+#define RIC_p  ((double)0.0)
+#define RIC_r  ((double)180.0)
+
+#define MIN_LOOP_NUM   22
+#define LOOP_FREQ      3
+#define WINDOW_SIZE    10  // 滑动窗口的大小
+#define PNP_SIZE       6
+
+#define MAX_IMU_CNT    10  // 两帧frame之间，最多可以存10个IMU数据
+
+#define SIZE_POSE      7   // 7 DoF(x, y, z, qx, qy, qz, qw)
+// 9 DoF(vx,vy,vz, bas_x,bas_y,bas_z, bgs_x,bgs_y,bgs_z)
 #define SIZE_SPEEDBIAS 9
-#define SIZE_SPEED 3
-#define SIZE_BIAS  6
+#define SIZE_SPEED     3   // 3 DoF(vx, vy, vz)
+#define SIZE_BIAS      6   // 6 DoF(bas_x,bas_y,bas_z, bgs_x,bgs_y,bgs_z)
+#define SIZE_FEATURE   1   // 1 DoF(inv_depth)
 
-#define SIZE_FEATURE 1
-
-#define NUM_OF_F 1000
-#define NUM_OF_CAM 1
-#define DEBUG_MODE false
-#define C_PI 3.1415926
+#define NUM_OF_F       1000 // TODO: 对于手机端，特征点是不是太多了？？？
+#define NUM_OF_CAM     1
+#define C_PI           3.1415926
 
 #define GRAVITY ((double)9.805)
-#define ACC_N ((double)0.5)  //0.02
-#define ACC_W ((double)0.002)
-#define GYR_N ((double)0.2)  //0.02
-#define GYR_W ((double)4.0e-5)
-#define BIAS_ACC_THRESHOLD ((double)0.5)
-#define BIAS_GYR_THRESHOLD ((double)0.1)
-#define G_THRESHOLD ((double)3.0)
-#define G_NORM ((double)9.805)
-#define INIT_KF_THRESHOLD ((double)18)
-#define SFM_R_THRESHOLD ((double)180)
-#define MAX_FEATURE_CNT 150
+
+// accelerometer measurement noise standard deviation. #0.2
+#define ACC_N   ((double)0.5)
+// accelerometer bias random work noise standard deviation. #0.02
+#define ACC_W   ((double)0.002)
+// gyroscope measurement noise standard deviation. #0.05
+#define GYR_N   ((double)0.2)
+// gyroscope bias random work noise standard deviation. #4.0e-5
+#define GYR_W   ((double)4.0e-5)
+
+#define BIAS_ACC_THRESHOLD  ((double)0.5)
+#define BIAS_GYR_THRESHOLD  ((double)0.1)
+#define G_THRESHOLD         ((double)3.0)
+#define G_NORM              ((double)9.805)   // gravity magnitude  #9.81007
+#define INIT_KF_THRESHOLD   ((double)18)
+#define SFM_R_THRESHOLD     ((double)180)
+// #define MAX_FEATURE_CNT 150
 
 extern double FOCUS_LENGTH_Y;
 extern double PY;
@@ -85,12 +97,12 @@ enum StateOrder
 bool setGlobalParam(DeviceType device);
 
 #if 1
-#define TS(name) int64 t_##name = cv::getTickCount()
-#define TE(name) printf("TIMER_" #name ": %.2fms\n", \
-1000.*((cv::getTickCount() - t_##name) / cv::getTickFrequency()))
+    #define TS(name) int64 t_##name = cv::getTickCount()
+    #define TE(name) printf("TIMER_" #name ": %.2fms\n", \
+                1000.*((cv::getTickCount() - t_##name) / cv::getTickFrequency()))
 #else
-#define TS(name)
-#define TE(name)
+    #define TS(name)
+    #define TE(name)
 #endif
 
 #endif /* global_param_h */

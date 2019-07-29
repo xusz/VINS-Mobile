@@ -24,7 +24,8 @@
 using namespace std;
 using namespace Eigen;
 
-struct VINS_RESULT {
+struct VINS_RESULT
+{
     double header;
     Vector3d Ba;
     Vector3d Bg;
@@ -33,7 +34,8 @@ struct VINS_RESULT {
     Vector3d V;
 };
 
-struct IMG_MSG_LOCAL {
+struct IMG_MSG_LOCAL
+{
     int id;
     Vector2d observation;
     Vector3d position;
@@ -47,27 +49,32 @@ public:
     typedef IMUFactorPnP IMUFactor_t;
     
     vinsPnP();
+    
     int frame_count;
     
     Matrix3d ric;
     Vector3d tic;
     
-    Vector3d Ps[(PNP_SIZE + 1)];
-    Vector3d Vs[(PNP_SIZE + 1)];
-    Matrix3d Rs[(PNP_SIZE + 1)];
-    Vector3d Bas[(PNP_SIZE + 1)];
-    Vector3d Bgs[(PNP_SIZE + 1)];
+    Vector3d Ps[(PNP_SIZE + 1)];   // 平移
+    Vector3d Vs[(PNP_SIZE + 1)];   // 速度
+    Matrix3d Rs[(PNP_SIZE + 1)];   // 旋转
+    Vector3d Bas[(PNP_SIZE + 1)];  // 加速度偏差
+    Vector3d Bgs[(PNP_SIZE + 1)];  // 陀螺仪偏差
     
     double para_Pose[PNP_SIZE + 1][SIZE_POSE];
     double para_Speed[PNP_SIZE + 1][SIZE_SPEED];
     double para_Bias[PNP_SIZE + 1][SIZE_BIAS];
+    
     double para_Feature[NUM_OF_F][SIZE_FEATURE];
     double para_Ex_Pose[NUM_OF_CAM][SIZE_POSE];
     
     IntegrationBase *pre_integrations[(PNP_SIZE + 1)];
-    vector<IMG_MSG_LOCAL> features[PNP_SIZE + 1];  //condition
+    vector<IMG_MSG_LOCAL> features[PNP_SIZE + 1];  // condition
+   
     bool first_imu;
-    Vector3d acc_0, gyr_0;
+    Vector3d acc_0;  // 线加速度
+    Vector3d gyr_0;  // 陀螺仪/角速度
+    
     vector<double> dt_buf[(PNP_SIZE + 1)];
     vector<Vector3d> linear_acceleration_buf[(PNP_SIZE + 1)];
     vector<Vector3d> angular_velocity_buf[(PNP_SIZE + 1)];
@@ -85,8 +92,17 @@ public:
     void setInit(VINS_RESULT vins_result);
     void slideWindow();
     void updateFeatures(vector<IMG_MSG_LOCAL> &feature_msg);
-    void processImage(vector<IMG_MSG_LOCAL> &feature_msg, double header, bool use_pnp);
-    void processIMU(double t, const Vector3d &linear_acceleration, const Vector3d &angular_velocity);
+    
+    void processImage(vector<IMG_MSG_LOCAL> &feature_msg,
+                      double header,
+                      bool use_pnp);
+    
+    void processIMU(double t,
+                    const Vector3d &linear_acceleration,
+                    const Vector3d &angular_velocity);
+    
     void changeState();
 };
+
 #endif /* VINS_hpp */
+

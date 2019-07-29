@@ -9,6 +9,7 @@
 #include "motion_estimator.hpp"
 /*
 namespace cv {
+    // 请参考视觉slam14讲第145页
     void decomposeEssentialMat( InputArray _E, OutputArray _R1, OutputArray _R2, OutputArray _t )
     {
         
@@ -197,7 +198,12 @@ namespace cv {
 }
 */
 
-bool MotionEstimator::solveRelativeRT(const vector<pair<Vector3d, Vector3d>> &corres, Matrix3d &Rotation, Vector3d &Translation)
+/**
+ * 利用五点法求解相机初始位姿，也是求本质矩阵
+ */
+bool MotionEstimator::solveRelativeRT(const vector<pair<Vector3d, Vector3d>> &corres,
+                                      Matrix3d &Rotation,
+                                      Vector3d &Translation)
 {
     printf("init solve5: corre size before %lu\n", corres.size());
     if (corres.size() >= 9)
@@ -209,10 +215,18 @@ bool MotionEstimator::solveRelativeRT(const vector<pair<Vector3d, Vector3d>> &co
             rr.push_back(cv::Point2f(corres[i].second(0), corres[i].second(1)));
         }
         cv::Mat mask;
-        cv::Mat E = cv::findEssentialMat(ll, rr);
-        cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
+        cv::Mat E = cv::findEssentialMat(ll, rr);  // 利用opencv函数求解...矩阵
+        cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << 1, 0, 0,
+                                                          0, 1, 0,
+                                                          0, 0, 1);
         cv::Mat rot, trans;
+        // recoverPose内用了一些复杂的条件判断如何选取R和T，但是其用了单位矩阵作为
+        // cameraMatrix，feature_tracker_node在处理图像的是已经把图像坐标转为归一化的相机坐标了,
+        // 并且进行了去畸变,所以之后的重投影部分只需要外参，不再需要内参了.
+        //
+        // 利用opencv函数分解...矩阵，得到相机旋转量、位移量
         int inlier_cnt = cv::recoverPose(E, ll, rr, rot, trans);
+        
         printf("init solve5: inlier size after %d\n", inlier_cnt);
         
         Eigen::Matrix3d R;
@@ -221,16 +235,25 @@ bool MotionEstimator::solveRelativeRT(const vector<pair<Vector3d, Vector3d>> &co
         {
             T(i) = trans.at<double>(i, 0);
             for (int j = 0; j < 3; j++)
+            {
                 R(i, j) = rot.at<double>(i, j);
+            }
         }
+        
         Eigen::Vector3d ypr = Utility::R2ypr(R);
         cout << "init solve5: " << ypr.transpose() << endl;
-        Rotation = R.transpose();
+        
+        Rotation = R.transpose();  // R^T
         Translation = -R.transpose() * T;
-        if(inlier_cnt > 10)
+        if (inlier_cnt > 10)  // TODO: 提前判断
+        {
             return true;
+        }
         else
+        {
             return false;
+        }
     }
+    
     return false;
 }

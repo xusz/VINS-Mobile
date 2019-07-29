@@ -9,11 +9,15 @@
 #include <stdio.h>
 #include "global_param.hpp"
 
-double FOCUS_LENGTH_Y;
+double FOCUS_LENGTH_Y;  // fx 参数
 double PY;
 double FOCUS_LENGTH_X;
-double PX;
+double PX;              // ppx 参数
 double SOLVER_TIME;
+/**
+ * // 控制发布次数的频率 frequence (Hz) of publish tracking result.
+ * At least 10Hz for good estimation. If set 0, the frequence will be same as raw image
+ */
 int FREQ;
 
 //extrinsic param
@@ -162,8 +166,4 @@ bool setGlobalParam(DeviceType device)
             break;
     }
 }
-
-
-
-
 

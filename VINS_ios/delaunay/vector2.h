@@ -7,53 +7,52 @@
 template <typename T>
 class Vector2
 {
-	public:
-		//
-		// Constructors
-		//
+public:
+	//
+	// Constructors
+	//
 
-		Vector2()
-		{
-			x = 0;
-			y = 0;
-		}
+	Vector2()
+	{
+		x = 0;
+		y = 0;
+	}
 
-		Vector2(T _x, T _y) 
-		{
-			x = _x;
-			y = _y;
-		}
+	Vector2(T _x, T _y)
+	{
+		x = _x;
+		y = _y;
+	}
 
-		Vector2(const Vector2 &v)
-		{
-			x = v.x;
-			y = v.y;
-		}
+	Vector2(const Vector2 &v)
+	{
+		x = v.x;
+		y = v.y;
+	}
 
-		void set(const Vector2 &v)
-		{
-			x = v.x;
-			y = v.y;
-		}
+	void set(const Vector2 &v)
+	{
+		x = v.x;
+		y = v.y;
+	}
 
-		//
-		// Operations
-		//	
-		T dist2(const Vector2 &v)
-		{
-			T dx = x - v.x;
-			T dy = y - v.y;
-			return dx * dx + dy * dy;	
-		}
+	//
+	// Operations
+	//
+	T dist2(const Vector2 &v)
+	{
+		T dx = x - v.x;
+		T dy = y - v.y;
+		return dx * dx + dy * dy;
+	}
 
-		float dist(const Vector2 &v)
-		{
-			return sqrtf(dist2(v));
-		}
+	float dist(const Vector2 &v)
+	{
+		return sqrtf(dist2(v));
+	}
 
-		T x;
-		T y;
-
+	T x;
+	T y;
 };
 
 template<typename T>
