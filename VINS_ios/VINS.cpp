@@ -517,8 +517,8 @@ void VINS::processImage(map<int, Vector3d> &image_msg,
     // printf("this frame is-------------------------------%s\n",
     //          marginalization_flag ? "reject" : "accept");
     // printf("Solving %d\n", frame_count);
-    printf("number of feature: %d %d\n",
-           feature_num = f_manager.getFeatureCount(), track_num);
+//    printf("number of feature: %d %d\n",
+//           feature_num = f_manager.getFeatureCount(), track_num);
     
     Headers[frame_count] = header;
     
@@ -922,7 +922,7 @@ void VINS::solve_ceres(int buf_num)
      * Jacobian数组里每一项都是IMU误差关于两帧图像状态的导数，只不过这里把pose和speedBias分开了
      */
     TS(ceres);
-    printf("ceres::Solve \n");
+//    printf("ceres::Solve \n");
     // 约束求解
     ceres::Solve(options, &problem, &summary);
     final_cost = summary.final_cost;
@@ -1621,7 +1621,7 @@ bool VINS::visualInitialAlign()
     {
         if (frame_i->second.is_key_frame)
         {
-            ++kv;
+            kv++;
             Vs[kv] = frame_i->second.R * x.segment<3>(kv * 3);
         }
     }
@@ -1866,7 +1866,7 @@ void VINS::slideWindow()
  */
 void VINS::slideWindowOld()
 {
-    printf("slideWindowOld -> marginalize back\n");
+//    printf("slideWindowOld -> marginalize back\n");
     
     point_cloud.clear();
     
@@ -1914,7 +1914,7 @@ void VINS::slideWindowOld()
 
 void VINS::slideWindowNew()
 {
-    printf("----- marginalize front ----- \n");
+//    printf("----- marginalize front ----- \n");
     f_manager.removeFront(frame_count);
 }
 

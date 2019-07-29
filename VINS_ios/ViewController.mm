@@ -894,9 +894,9 @@ bool start_global_optimization = false;
         vins.processImage(image, header, waiting_lists);
         TE(process_image);
         
-        double time_now = [[NSProcessInfo processInfo] systemUptime];
-        double time_vins = vins.Headers[WINDOW_SIZE];
-        NSLog(@"vins delay %lf", time_now - time_vins);
+//        double time_now = [[NSProcessInfo processInfo] systemUptime];
+//        double time_vins = vins.Headers[WINDOW_SIZE];
+//        NSLog(@"vins delay %lf", time_now - time_vins);
         
         // update feature position for front-end
         // 后端非线性优化
@@ -1102,7 +1102,7 @@ bool start_global_optimization = false;
 
 
 /*
- Loop detection thread: this thread detect loop for newest keyframe and retrieve features
+ * Loop detection thread: this thread detect loop for newest keyframe and retrieve features
  * 闭环检测
  */
 -(void)loop_thread
@@ -1279,10 +1279,10 @@ vector<IMU_MSG> gyro_buf;  // for Interpolation
          motionManager.deviceMotion.attitude.roll * 180.0 / M_PI,   // pitch for vins
          motionManager.deviceMotion.attitude.pitch * 180.0 / M_PI;  // roll for vins
          
-         printf("Sensor  pitch:[%f]  yaw:[%f]  roll:[%f] \n",
-                motionManager.deviceMotion.attitude.pitch * 180.0 / M_PI,
-                motionManager.deviceMotion.attitude.roll * 180.0 / M_PI,
-                motionManager.deviceMotion.attitude.yaw * 180.0 / M_PI);
+//         printf("Sensor  pitch:[%f]  yaw:[%f]  roll:[%f] \n",
+//                motionManager.deviceMotion.attitude.pitch * 180.0 / M_PI,
+//                motionManager.deviceMotion.attitude.roll * 180.0 / M_PI,
+//                motionManager.deviceMotion.attitude.yaw * 180.0 / M_PI);
          
          // 剔除前10个加速度值
          if (imu_prepare < 10)

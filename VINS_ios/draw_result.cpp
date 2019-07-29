@@ -59,8 +59,8 @@ bool checkBorder(const cv::Point2f &pt)
 
 float check_scale(const cv::Point2f &pt)
 {
-    float scale_factor;
     const int BORDER_SIZE = 1;
+    float scale_factor;
     int img_x = cvRound(pt.x);
     int img_y = cvRound(pt.y);
     
@@ -637,16 +637,16 @@ void DrawResult::drawAR(cv::Mat &result,
     
     float degr = acos(w_cam_z.dot(Vector3f(0, 0, 1))) * 180.0 / M_PI;
     
-    printf("drawAR  degr : %f\n", degr);
+//    printf("drawAR  degr : %f\n", degr);
     
     if (acos(w_cam_z.dot(Vector3f(0, 0, 1))) * 180.0 / M_PI < 60)
     {
-        printf("drawAR  look down\n");
+//        printf("drawAR  look down\n");
         look_down = true;
     }
     else
     {
-        printf("drawAR  not down : %f\n", degr);
+//        printf("drawAR  not down : %f\n", degr);
         look_down = false;
     }
     

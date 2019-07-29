@@ -34,8 +34,6 @@ enum DeviceType
 #define WINDOW_SIZE    10  // 滑动窗口的大小
 #define PNP_SIZE       6
 
-#define MAX_IMU_CNT    10  // 两帧frame之间，最多可以存10个IMU数据
-
 #define SIZE_POSE      7   // 7 DoF(x, y, z, qx, qy, qz, qw)
 // 9 DoF(vx,vy,vz, bas_x,bas_y,bas_z, bgs_x,bgs_y,bgs_z)
 #define SIZE_SPEEDBIAS 9

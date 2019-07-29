@@ -204,7 +204,7 @@ bool GlobalSFM::construct(int frame_num,
     // intial two view
     // 把relativePose找到的第l帧作为初始位置，最后一帧的pose为relative_R,relative_T
     // （是字母l，不是数字1，l是在滑动窗口中找到的与最新帧做5点法的帧的帧号）
-    // 第l帧的姿态设置为一个没有任何旋转的实单位四元数
+    // 第l帧的姿态设置为一个没有任何旋转的实单位四元数，第l帧作为初始状态帧
     q[l].w() = 1;
     q[l].x() = 0;
     q[l].y() = 0;
@@ -220,15 +220,15 @@ bool GlobalSFM::construct(int frame_num,
     //cout << "init t_l " << T[l].transpose() << endl;
     
     // rotate to cam frame
-    Matrix3d *c_Rotation = new Matrix3d[frame_num];
-    Vector3d *c_Translation = new Vector3d[frame_num];
-    Quaterniond *c_Quat = new Quaterniond[frame_num];
+	Matrix3d c_Rotation[frame_num];
+	Vector3d c_Translation[frame_num];
+	Quaterniond c_Quat[frame_num];
     // for ceres
     double c_rotation[frame_num][4];
     double c_translation[frame_num][3];
     
-    // 滑动窗口中各帧在世界坐标系（推断，一开始是把第l帧相机坐标系作为世界坐标系）中的位姿
-    Eigen::Matrix<double, 3, 4> *Pose = new Eigen::Matrix<double, 3, 4>[frame_num];
+    // 滑动窗口中各帧在世界坐标系（一开始是把第l帧相机坐标系作为世界坐标系起始点）中的位姿
+	Eigen::Matrix<double, 3, 4> Pose[frame_num];  // [R|t]
     
     /*
      * 第l帧
@@ -322,12 +322,14 @@ bool GlobalSFM::construct(int frame_num,
     for (int i = l - 1; i >= 0; i--)
     {
         // solve pnp
-        cout << "solve pnp frame " << i << endl;
         Matrix3d R_initial = c_Rotation[i + 1];
         Vector3d P_initial = c_Translation[i + 1];
         
-        solveFrameByPnP(R_initial, P_initial, i, sfm_f);
-        
+		if(!solveFrameByPnP(R_initial, P_initial, i, sfm_f))
+		{
+			return false;
+		}
+
         c_Rotation[i] = R_initial;
         c_Translation[i] = P_initial;
         c_Quat[i] = c_Rotation[i];
@@ -415,12 +417,6 @@ bool GlobalSFM::construct(int frame_num,
         }
     }
     
-    // TODO: 内存泄露严重，很多new的内存，没有在合适的位置delete
-    delete [] c_Rotation;
-    delete [] c_Translation;
-    delete [] c_Quat;
-    delete [] Pose;
-    
     for (int i = 0; i < feature_num; i++)
     {
         if (sfm_f[i].state != true) {
@@ -454,11 +450,11 @@ bool GlobalSFM::construct(int frame_num,
     if (summary.termination_type == ceres::CONVERGENCE
         || summary.final_cost < 3e-03)
     {
-        cout << "vision only BA converge" << endl;
+//        cout << "vision only BA converge" << endl;
     }
     else
     {
-        cout << "vision only BA not converge " << endl;
+//        cout << "vision only BA not converge " << endl;
         return false;
     }
     

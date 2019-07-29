@@ -9,14 +9,14 @@ class Edge
 {
 public:
     Edge(const Vec2f_ &p1, const Vec2f_ &p2)
-        : p1(p1),
-          p2(p2)
+        : p1(p1)
+        , p2(p2)
     {
     };
     
     Edge(const Edge &e)
-        : p1(e.p1),
-          p2(e.p2)
+        : p1(e.p1)
+        , p2(e.p2)
     {
     };
 
