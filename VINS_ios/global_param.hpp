@@ -11,8 +11,10 @@
 
 enum DeviceType
 {
+    iPhone5s,
     iPhone7P,
     iPhone7,
+    iPhone6P,
     iPhone6sP,
     iPhone6s,
     iPadPro97,
