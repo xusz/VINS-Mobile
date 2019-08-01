@@ -290,22 +290,22 @@ bool imageCacheEnabled = cameraMode && !USE_PNP;
     mainLoop_thread = [[NSThread alloc]initWithTarget:self selector:@selector(run) object:nil];
     [mainLoop_thread setName:@"mainLoop_thread"];
     
-    saveData_thread = [[NSThread alloc]initWithTarget:self selector:@selector(saveData) object:nil];
-    [saveData_thread setName:@"saveData_thread"];
-    
-    if (LOOP_CLOSURE)
-    {
-        //loop closure thread
-        loop_thread = [[NSThread alloc]initWithTarget:self selector:@selector(loop_thread) object:nil];
-        [loop_thread setName:@"loop_thread"];
-        [loop_thread start];
-        
-        globalLoopThread=[[NSThread alloc] initWithTarget:self
-                                           selector:@selector(globalLoopThread)
-                                           object:nil];
-        [globalLoopThread setName:@"globalLoopThread"];
-        [globalLoopThread start];
-    }
+//    saveData_thread = [[NSThread alloc]initWithTarget:self selector:@selector(saveData) object:nil];
+//    [saveData_thread setName:@"saveData_thread"];
+//
+//    if (LOOP_CLOSURE)
+//    {
+//        //loop closure thread
+//        loop_thread = [[NSThread alloc]initWithTarget:self selector:@selector(loop_thread) object:nil];
+//        [loop_thread setName:@"loop_thread"];
+//        [loop_thread start];
+//
+//        globalLoopThread=[[NSThread alloc] initWithTarget:self
+//                                           selector:@selector(globalLoopThread)
+//                                           object:nil];
+//        [globalLoopThread setName:@"globalLoopThread"];
+//        [globalLoopThread start];
+//    }
     
     /**************** Device and iOS version check ****************/
     bool deviceCheck = setGlobalParam(deviceName());
@@ -379,6 +379,7 @@ cv::Mat pnp_image;
 Vector3d pnp_P;
 Matrix3d pnp_R;
 
+
 - (void)processImage:(cv::Mat&)image
 {
     if (isCapturing == YES)
@@ -390,6 +391,9 @@ Matrix3d pnp_R;
         //image.at<float>(0,0) = image.at<float>(1,0);
         //image.at<float>(0,1) = image.at<float>(1,1);
         shared_ptr<IMG_MSG> img_msg(new IMG_MSG());
+        
+        // TODO: 要确保IMG 和 IMU 的时间戳准确且一致
+        
         //cout << (videoCamera->grayscaleMode) << endl;
         //img_msg->header = [[NSDate date] timeIntervalSince1970];
         img_msg->header = [[NSProcessInfo processInfo] systemUptime];
@@ -409,7 +413,7 @@ Matrix3d pnp_R;
         }
         // img_msg->header = lateast_imu_time;
         // TODO: FOR TEST
-//        img_msg->header = time_stamp;
+        img_msg->header = time_stamp;
         BOOL isNeedRotation = image.size() != frameSize; // 横竖屏size
         
         // for save data
@@ -439,7 +443,7 @@ Matrix3d pnp_R;
         }
         else
         {
-            input_frame = image;
+            //            input_frame = image;  // TODO:
         }
         
         if (start_record) // for debug
@@ -464,10 +468,14 @@ Matrix3d pnp_R;
          * 2. clahe[对比度受限的自适应直方图均衡化]
          * 3. 如果图像正常，设置成当前图像。在读取图像的时候进行光流跟踪和特征点的提取
          */
+//        TS(time_GRAY);
+
         cv::Mat gray;
-        cv::cvtColor(input_frame, gray, CV_RGBA2GRAY);
+        cv::cvtColor(image, gray, CV_RGBA2GRAY);  // TODO:
         cv::Mat img_with_feature;
-        cv::Mat img_equa;
+//        cv::Mat img_equa;
+        
+//        TE(time_GRAY);
         
         /**
          * PS：CLAHE是一种直方图均衡算法，能有效的增强或改善图像（局部）对比度，
@@ -476,18 +484,18 @@ Matrix3d pnp_R;
          * 从而有利于后续的书脊边界直线的检测和提取，还能够有效改善AHE中放大噪声的问题，
          * 虽然在实际中应用不多，但是效果确实不错
          */
-        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
-        // 直方图的柱子高度大于计算后的ClipLimit的部分被裁剪掉，
-        // 然后将其平均分配给整张直方图从而提升整个图像
-        clahe->setClipLimit(3);  // (如果EQUALIZE=1，表示太亮或太暗)
-        clahe->apply(gray, img_equa);
+//        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE();
+//        // 直方图的柱子高度大于计算后的ClipLimit的部分被裁剪掉，
+//        // 然后将其平均分配给整张直方图从而提升整个图像
+//        clahe->setClipLimit(3);  // (如果EQUALIZE=1，表示太亮或太暗)
+//        clahe->apply(gray, img_equa);
         // img_equa = gray;
-        TS(time_feature);
+//        TS(time_feature);
         
-        m_depth_feedback.lock();
-        featuretracker.solved_features = solved_features;
-        featuretracker.solved_vins = solved_vins;
-        m_depth_feedback.unlock();
+//        m_depth_feedback.lock();
+//        featuretracker.solved_features = solved_features;
+//        featuretracker.solved_vins = solved_vins;
+//        m_depth_feedback.unlock();
         
         /* 获取上一帧到当前帧图像之间的IMU数据 */
         // TODO: FOR TEST
@@ -500,8 +508,9 @@ Matrix3d pnp_R;
         bool vins_normal = (vins.solver_flag == VINS::NON_LINEAR); // 是否已初始化完成
         featuretracker.use_pnp = USE_PNP;   // pnp 求解位姿
         
+//        TS(time_feature);
         // 读取图像数据进行处理
-        featuretracker.readImage(img_equa, img_with_feature,
+        featuretracker.readImage(gray, img_with_feature,
                                  frame_cnt, good_pts,
                                  track_len, img_msg->header,
                                  pnp_P, pnp_R, vins_normal);
@@ -510,16 +519,8 @@ Matrix3d pnp_R;
         pnp_P = vins.Ps[WINDOW_SIZE];
         pnp_R = vins.Rs[WINDOW_SIZE];
         
-        TE(time_feature);
+//        TE(time_feature);
         // cvtColor(img_equa, img_equa, CV_GRAY2BGR);
-        
-        // 对Good points 绘制圆形点
-        for (int i = 0; i < good_pts.size(); i++)
-        {
-            // cv::Scalar : 设置图片的颜色 BGRA
-            cv::circle(image, good_pts[i], 0,
-                       cv::Scalar(255 * (1 - track_len[i]), 0, 255 * track_len[i]), 7);  // BGR
-        }
         
         // image msg buf   图像数据的缓冲队列
         if (featuretracker.img_cnt == 0)
@@ -531,66 +532,69 @@ Matrix3d pnp_R;
             //NSLog(@"Img timestamp %lf",img_msg_buf.front()->header);
             m_buf.unlock();
             con.notify_one();  // 唤醒作用于process线程中的获取观测值数据的函数
-            if (imageCacheEnabled)
-            {
-                image_data_cache.header = img_msg->header;
-                image_data_cache.image = MatToUIImage(image);
-                image_pool.push(image_data_cache);
-            }
             
-            if (LOOP_CLOSURE)
-            {
-                m_image_buf_loop.lock();
-                cv::Mat loop_image = gray.clone();
-                image_buf_loop.push(make_pair(loop_image, img_msg->header));
-                if (image_buf_loop.size() > WINDOW_SIZE)
-                {
-                    image_buf_loop.pop();
-                }
-                m_image_buf_loop.unlock();
-            }
+//            if (imageCacheEnabled)
+//            {
+//                image_data_cache.header = img_msg->header;
+//                image_data_cache.image = MatToUIImage(image);
+//                image_pool.push(image_data_cache);
+//            }
+//
+//            if (LOOP_CLOSURE)
+//            {
+//                m_image_buf_loop.lock();
+//                cv::Mat loop_image = gray.clone();
+//                image_buf_loop.push(make_pair(loop_image, img_msg->header));
+//                if (image_buf_loop.size() > WINDOW_SIZE)
+//                {
+//                    image_buf_loop.pop();
+//                }
+//                m_image_buf_loop.unlock();
+//            }
         }
+        
+//        TS(visualize);
         
         featuretracker.img_cnt = (featuretracker.img_cnt + 1) % FREQ;
         for (int i = 0; i < good_pts.size(); i++)
         {
+            // cv::Scalar : 设置图片的颜色 BGRA
             cv::circle(image, good_pts[i], 0,
                        cv::Scalar(255 * (1 - track_len[i]), 0, 255 * track_len[i]), 7);  // BGR
         }
-        TS(visualize);
-        
-        if (imageCacheEnabled)
-        {
-            // use aligned vins and image
-            if (!vins_pool.empty() && !image_pool.empty())
-            {
-                while (vins_pool.size() > 1)
-                {
-                    vins_pool.pop();
-                }
-                
-                while (!image_pool.empty()
-                       && image_pool.front().header < vins_pool.front().header)
-                {
-                    image_pool.pop();
-                }
-                
-                if (!vins_pool.empty() && !image_pool.empty())
-                {
-                    lateast_image = image_pool.front().image;
-                    lateast_P = vins_pool.front().P;
-                    lateast_R = vins_pool.front().R;
-                    UIImageToMat(lateast_image, image);
-                }
-            }
-            else if(!image_pool.empty())
-            {
-                if (image_pool.size() > 10)
-                {
-                    image_pool.pop();
-                }
-            }
-        }
+
+//        if (imageCacheEnabled)
+//        {
+//            // use aligned vins and image
+//            if (!vins_pool.empty() && !image_pool.empty())
+//            {
+//                while (vins_pool.size() > 1)
+//                {
+//                    vins_pool.pop();
+//                }
+//
+//                while (!image_pool.empty()
+//                       && image_pool.front().header < vins_pool.front().header)
+//                {
+//                    image_pool.pop();
+//                }
+//
+//                if (!vins_pool.empty() && !image_pool.empty())
+//                {
+//                    lateast_image = image_pool.front().image;
+//                    lateast_P = vins_pool.front().P;
+//                    lateast_R = vins_pool.front().R;
+//                    UIImageToMat(lateast_image, image);
+//                }
+//            }
+//            else if(!image_pool.empty())
+//            {
+//                if (image_pool.size() > 10)
+//                {
+//                    image_pool.pop();
+//                }
+//            }
+//        }
         
         if (USE_PNP)
         {
@@ -677,7 +681,7 @@ Matrix3d pnp_R;
             }
         }
         
-        TE(visualize);
+//        TE(visualize);
     }
     else
     {
@@ -867,6 +871,8 @@ bool start_global_optimization = false;
    
     for (auto &measurement : measurements)
     {
+        TS(_______time_process_each________);
+        
         // 一个图img_msg对应着一批imu_msg数据
         // 分别取出各段imu数据，进行预积分
         for (auto &imu_msg : measurement.first)
@@ -943,6 +949,7 @@ bool start_global_optimization = false;
             m_depth_feedback.unlock();
         }
         
+        imageCacheEnabled = false;
         if (imageCacheEnabled)
         {
             // add state into vins buff for alignwith image
@@ -1092,6 +1099,8 @@ bool start_global_optimization = false;
             }
         }
         
+        TE(_______time_process_each________);
+        
         waiting_lists--;
         
         // finish solve one frame
@@ -1218,22 +1227,22 @@ bool start_global_optimization = false;
  */
 -(void)globalLoopThread
 {
-    while (![[NSThread currentThread] isCancelled])
-    {
-        if (start_global_optimization)
-        {
-            start_global_optimization = false;
-            TS(loop_thread);
-            keyframe_database.optimize4DoFLoopPoseGraph(kf_global_index,
-                                                        loop_correct_t,
-                                                        loop_correct_r);
-            vins.t_drift = loop_correct_t;
-            vins.r_drift = loop_correct_r;
-            TE(loop_thread);
-            [NSThread sleepForTimeInterval:1.17];
-        }
-        [NSThread sleepForTimeInterval:0.03];
-    }
+//    while (![[NSThread currentThread] isCancelled])
+//    {
+//        if (start_global_optimization)
+//        {
+//            start_global_optimization = false;
+//            TS(loop_thread);
+//            keyframe_database.optimize4DoFLoopPoseGraph(kf_global_index,
+//                                                        loop_correct_t,
+//                                                        loop_correct_r);
+//            vins.t_drift = loop_correct_t;
+//            vins.r_drift = loop_correct_r;
+//            TE(loop_thread);
+//            [NSThread sleepForTimeInterval:1.17];
+//        }
+//        [NSThread sleepForTimeInterval:0.03];
+//    }
 }
 
 /*
@@ -1247,8 +1256,9 @@ bool start_global_optimization = false;
  */
 bool imuDataFinished = false;
 bool vinsDataFinished = false;
-shared_ptr<IMU_MSG> cur_acc(new IMU_MSG());
-vector<IMU_MSG> gyro_buf;  // for Interpolation
+
+IMU_MSG acc_buf[3];
+IMU_MSG gyr_buf[3];
 
 /**
  * 通过创建一个CMMotionManager单例，负责获取IMU数据
@@ -1268,9 +1278,26 @@ vector<IMU_MSG> gyro_buf;  // for Interpolation
     motionManager.gyroUpdateInterval = 0.01;
 #endif
     
+    acc_buf[0].header = -1;
+    acc_buf[1].header = -1;
+    acc_buf[2].header = -1;
+    
+    gyr_buf[0].header = -1;
+    gyr_buf[1].header = -1;
+    gyr_buf[2].header = -1;
+    
+    /**
+     * CMDeviceMotion属性介绍：
+     * attitude：通俗来讲，就是告诉你手机在当前空间的位置和姿势
+     * gravity：重力信息，其本质是重力加速度矢量在当前设备的参考坐标系中的表达
+     * userAcceleration：加速度信息
+     * rotationRate：即时的旋转速率，是陀螺仪的输出
+     *
+     * TODO: 是否可以使用 attitude 和 gravity 的值？？？
+     */
     [motionManager startDeviceMotionUpdates];
     
-    // 获取加速度
+    // 获取线加速度
     [motionManager startAccelerometerUpdatesToQueue:[NSOperationQueue currentQueue]
                                         withHandler:^(CMAccelerometerData *latestAcc,
                                                       NSError *error)
@@ -1283,177 +1310,183 @@ vector<IMU_MSG> gyro_buf;  // for Interpolation
 //                motionManager.deviceMotion.attitude.pitch * 180.0 / M_PI,
 //                motionManager.deviceMotion.attitude.roll * 180.0 / M_PI,
 //                motionManager.deviceMotion.attitude.yaw * 180.0 / M_PI);
+//
+//         /* Gravity 在各个方向的份量，总和是1 */
+//         printf("Gravity : [%f  %f  %f] \n",
+//                motionManager.deviceMotion.gravity.x,
+//                motionManager.deviceMotion.gravity.y,
+//                motionManager.deviceMotion.gravity.z);
+//
+//         printf("userAcceleration : [%f  %f  %f] \n",
+//                motionManager.deviceMotion.userAcceleration.x,
+//                motionManager.deviceMotion.userAcceleration.y,
+//                motionManager.deviceMotion.userAcceleration.z);
+//
+//         printf("CMAccelerometerData : [%f  %f  %f] \n",
+//                latestAcc.acceleration.x,
+//                latestAcc.acceleration.y,
+//                latestAcc.acceleration.z);
          
-         // 剔除前10个加速度值
-         if (imu_prepare < 10)
+         // 剔除前20个值
+         if (imu_prepare < 20)
          {
              imu_prepare++;
+             return;
          }
-         shared_ptr<IMU_MSG> acc_msg(new IMU_MSG());
-         acc_msg->header = latestAcc.timestamp;
-         acc_msg->acc << -latestAcc.acceleration.x * GRAVITY,
-                         -latestAcc.acceleration.y * GRAVITY,
-                         -latestAcc.acceleration.z * GRAVITY;
          
-         cur_acc = acc_msg;
-         // printf("imu acc update %lf %lf %lf %lf\n", acc_msg->header,
-         //         acc_msg->acc.x(), acc_msg->acc.y(), acc_msg->acc.z());
+         m_buf.lock();     //////
+         
+         // buf 为空
+         if (acc_buf[0].header < 0)
+         {
+             acc_buf[0].header = latestAcc.timestamp;
+             acc_buf[0].acc << -latestAcc.acceleration.x * GRAVITY,
+                               -latestAcc.acceleration.y * GRAVITY,
+                               -latestAcc.acceleration.z * GRAVITY;
+             
+             printf("+++ imu ACC Empty update【%lf】   %lf %lf %lf \n",
+                    acc_buf[0].header, acc_buf[0].acc.x(), acc_buf[0].acc.y(), acc_buf[0].acc.z());
+         }
+         else if (acc_buf[2].header > 0)   // buf 已满，将buf中的值前移，丢弃buf[0]
+         {
+             acc_buf[0] = acc_buf[1];
+             acc_buf[1] = acc_buf[2];
+             acc_buf[2].header = latestAcc.timestamp;
+             acc_buf[2].acc << -latestAcc.acceleration.x * GRAVITY,
+                               -latestAcc.acceleration.y * GRAVITY,
+                               -latestAcc.acceleration.z * GRAVITY;
+             printf("+++ imu ACC Full  update【%lf】   %lf %lf %lf \n",
+                    acc_buf[1].header, acc_buf[1].acc.x(), acc_buf[1].acc.y(), acc_buf[0].acc.z());
+         }
+         else if (acc_buf[1].header > 0)   // buf[2]无值，新值追加到buf[2]
+         {
+             acc_buf[2].header = latestAcc.timestamp;
+             acc_buf[2].acc << -latestAcc.acceleration.x * GRAVITY,
+                               -latestAcc.acceleration.y * GRAVITY,
+                               -latestAcc.acceleration.z * GRAVITY;
+             printf("+++ imu ACC Half-1  update【%lf】   %lf %lf %lf \n",
+                    acc_buf[1].header, acc_buf[1].acc.x(), acc_buf[1].acc.y(), acc_buf[0].acc.z());
+         }
+         else if (acc_buf[0].header > 0) // 只有buf[0]有值，新值追加到buf[1]
+         {
+             acc_buf[1].header = latestAcc.timestamp;
+             acc_buf[1].acc << -latestAcc.acceleration.x * GRAVITY,
+                               -latestAcc.acceleration.y * GRAVITY,
+                               -latestAcc.acceleration.z * GRAVITY;
+             printf("+++ imu ACC Half-0  update【%lf】   %lf %lf %lf \n",
+                    acc_buf[1].header, acc_buf[1].acc.x(), acc_buf[1].acc.y(), acc_buf[0].acc.z());
+         }
+         
+         m_buf.unlock();   //////
+         
+         sync_imu();
      }];
     
     // 获取角加速度
     [motionManager startGyroUpdatesToQueue:[NSOperationQueue currentQueue]
                                withHandler:^(CMGyroData *latestGyro, NSError *error)
      {
-         //The time stamp is the amount of time in seconds since the device booted.
-         NSTimeInterval header = latestGyro.timestamp;
-         if (header <= 0)
+         // 最多存储3个值
+         if (imu_prepare < 16)
          {
-             return;
-         }
-         if (imu_prepare < 10)
-         {
-             return;
-         }
-         
-         IMU_MSG gyro_msg;
-         gyro_msg.header = header;
-         gyro_msg.gyr << latestGyro.rotationRate.x,
-                         latestGyro.rotationRate.y,
-                         latestGyro.rotationRate.z;
-         
-         if (gyro_buf.size() == 0)
-         {
-             gyro_buf.push_back(gyro_msg);
-             gyro_buf.push_back(gyro_msg);
-             return;
-         }
-         else
-         {
-             // 移除旧的，只保留2次值
-             gyro_buf[0] = gyro_buf[1];
-             gyro_buf[1] = gyro_msg;
-         }
-         
-         // interpolation
-         shared_ptr<IMU_MSG> imu_msg(new IMU_MSG());
-         // acc 和 gyro 保持同步
-         if (cur_acc->header >= gyro_buf[0].header
-             && cur_acc->header < gyro_buf[1].header)
-         {
-             imu_msg->header = cur_acc->header;
-             imu_msg->acc = cur_acc->acc;
-             imu_msg->gyr = gyro_buf[0].gyr + (cur_acc->header - gyro_buf[0].header)*(gyro_buf[1].gyr - gyro_buf[0].gyr) / (gyro_buf[1].header - gyro_buf[0].header);
-             //printf("imu gyro update %lf %lf %lf\n", gyro_buf[0].header, imu_msg->header, gyro_buf[1].header);
+             gyr_buf[0] = gyr_buf[1];
+             gyr_buf[1] = gyr_buf[2];
              
-             printf("imu inte update gyro: %lf %lf %lf %lf\n",
-                    imu_msg->header, gyro_buf[0].gyr.x(), imu_msg->gyr.x(), gyro_buf[1].gyr.x());
-         }
-         else
-         {
-             printf("imu error %lf %lf %lf\n",
-                    gyro_buf[0].header, cur_acc->header, gyro_buf[1].header);
+             gyr_buf[2].header = latestGyro.timestamp;
+             gyr_buf[2].gyr << latestGyro.rotationRate.x,
+                                 latestGyro.rotationRate.y,
+                                 latestGyro.rotationRate.z;
              return;
          }
          
-#ifdef READ_VINS
-         if (start_playback_vins)
-         {
-             if (vinsDataFinished)
-             {
-                 return;
-             }
-             NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,
-                                                                  NSUserDomainMask, YES);
-             NSString *documentsPath = [paths objectAtIndex:0];
-             NSString *filePath = [documentsPath stringByAppendingPathComponent:@"VINS"];
-             vinsReader = [NSData dataWithContentsOfFile:filePath];
-             
-             [vinsReader getBytes:&vinsData range: NSMakeRange(vinsDataReadIndex * sizeof(vinsData), sizeof(vinsData))];
-             vinsDataReadIndex++;
-             
-             if (vinsData.header == 0)
-             {
-                 printf("record play vins finished\n");
-                 vinsDataFinished = true;
-                 return;
-             }
-             printf("record play vins: %4d, %lf %lf %lf %lf %lf %lf %lf %lf\n",
-                    vinsDataReadIndex,
-                    vinsData.header,
-                    vinsData.translation.x(),
-                    vinsData.translation.y(),
-                    vinsData.translation.z(),
-                    vinsData.rotation.w(),
-                    vinsData.rotation.x(),
-                    vinsData.rotation.y(),
-                    vinsData.rotation.z());
-         }
-#endif
-         // for save data, for debug
-         if (start_playback)
-         {
-             // TS(read_imu_buf);
-             if (imuDataFinished)
-             {
-                 return;
-             }
-             [imuReader getBytes:&imuData range: NSMakeRange(imuDataReadIndex * sizeof(imuData), sizeof(imuData))];
-             imuDataReadIndex++;
-             if (imuData.header == 0)
-             {
-                 imuDataFinished = true;
-                 return;
-             }
-             imu_msg->header = imuData.header;
-             imu_msg->acc = imuData.acc;
-             imu_msg->gyr = imuData.gyr;
-             // TE(read_imu_buf);
-#ifdef DATA_EXPORT
-             printf("record play imu: %lf %lf %lf %lf %lf %lf %lf\n",
-                    imuData.header,
-                    imu_msg->acc.x(),
-                    imu_msg->acc.y(),
-                    imu_msg->acc.z(),
-                    imu_msg->gyr.x(),
-                    imu_msg->gyr.y(),
-                    imu_msg->gyr.z());
-#endif
-         }
+         m_buf.lock();   //////
          
-         // for debug
-         if (start_record)
-         {
-             TS(record_imu_buf);
-             imuData.header = imu_msg->header;
-             imuData.acc = imu_msg->acc;
-             imuData.gyr = imu_msg->gyr;
-             [imuDataBuf appendBytes:&imuData length:sizeof(imuData)];
-             imuDataIndex++;
-             TE(record_imu_buf);
-             // NSLog(@"record: imu %lf, %lu",imuData.header,imuDataIndex);
-         }
+         gyr_buf[0] = gyr_buf[1];
+         gyr_buf[1] = gyr_buf[2];
          
-         lateast_imu_time = imu_msg->header;
+         gyr_buf[2].header = latestGyro.timestamp;
+         gyr_buf[2].gyr << latestGyro.rotationRate.x,
+                             latestGyro.rotationRate.y,
+                             latestGyro.rotationRate.z;
+
+         printf("+++ imu Gyr  update【%lf】   %lf %lf %lf \n",
+                gyr_buf[2].header, gyr_buf[2].gyr.x(), gyr_buf[2].gyr.y(), gyr_buf[2].gyr.z());
          
-         // imu_msg callback TODO: FOR TEST
-//         {
-//             IMU_MSG_LOCAL imu_msg_local;
-//             imu_msg_local.header = imu_msg->header;
-//             imu_msg_local.acc = imu_msg->acc;
-//             imu_msg_local.gyr = imu_msg->gyr;
-//
-//             m_imu_feedback.lock();
-//             local_imu_msg_buf.push(imu_msg_local);
-//             m_imu_feedback.unlock();
-//         }
-         m_buf.lock();
-         imu_msg_buf.push(imu_msg);
-         
-         // NSLog(@"IMU_buf timestamp %lf, acc_x = %lf",imu_msg_buf.front()->header,imu_msg_buf.front()->acc.x());
-         m_buf.unlock();
-         con.notify_one();  // 唤醒作用于process线程中的获取观测值数据的函数
+         m_buf.unlock();   //////
+
+         sync_imu();
      }];
 }
+
+double max_interval = 0;
+
+void sync_imu()
+{
+    shared_ptr<IMU_MSG> imu_msg(new IMU_MSG());
+    
+    m_buf.lock();   ///////
+
+    // TODO: acc 和 gyr 时间戳相差无几的时候，不需要再求gyr的中值
+    if (acc_buf[0].header >= gyr_buf[0].header && acc_buf[0].header < gyr_buf[1].header)
+    {
+        imu_msg->header = acc_buf[0].header;
+        imu_msg->acc = acc_buf[0].acc;
+        imu_msg->gyr = gyr_buf[0].gyr + (acc_buf[0].header - gyr_buf[0].header)*(gyr_buf[1].gyr - gyr_buf[0].gyr)/(gyr_buf[1].header - gyr_buf[0].header);
+    
+        acc_buf[0].header = -1;
+        if (acc_buf[1].header > 0)
+        {
+            acc_buf[0] = acc_buf[1];
+            acc_buf[1] = acc_buf[2];
+            acc_buf[2].header = -1;
+        }
+    }
+    else if (acc_buf[0].header >= gyr_buf[1].header && acc_buf[0].header < gyr_buf[2].header)
+    {
+        imu_msg->header = acc_buf[0].header;
+        imu_msg->acc = acc_buf[0].acc;
+        imu_msg->gyr = gyr_buf[1].gyr + (acc_buf[0].header - gyr_buf[1].header)*(gyr_buf[2].gyr - gyr_buf[1].gyr)/(gyr_buf[2].header - gyr_buf[1].header);
+        
+        acc_buf[0].header = -1;
+        if (acc_buf[1].header > 0)
+        {
+            acc_buf[0] = acc_buf[1];
+            acc_buf[1] = acc_buf[2];
+            acc_buf[2].header = -1;
+        }
+    }
+    else
+    {
+        m_buf.unlock();   ///////
+        return;
+    }
+    
+    // TODO: For test
+    if (imu_msg->header > lateast_imu_time + 0.013 && lateast_imu_time > 0)
+    {
+        printf("xxx IMU interval[%lf] (%lf: %lf - %lf - %lf)\n",
+               (imu_msg->header - lateast_imu_time), imu_msg->header, gyr_buf[0].header, gyr_buf[1].header, gyr_buf[2].header);
+    }
+    
+    // TODO: For test
+    if (imu_msg->header - lateast_imu_time > max_interval && lateast_imu_time > 0)
+    {
+        max_interval = imu_msg->header - lateast_imu_time;
+    }
+    printf("------ max_interval【%lf】\n", max_interval);
+    
+    printf("------ IMU_MSG【%lf】  acc:[%lf %lf %lf]  gyr:[%lf %lf %lf] \n\n",
+           imu_msg->header,
+           imu_msg->acc.x(), imu_msg->acc.y(), imu_msg->acc.z(),
+           imu_msg->gyr.x(), imu_msg->gyr.y(), imu_msg->gyr.z());
+    
+    lateast_imu_time = imu_msg->header;
+    
+    imu_msg_buf.push(imu_msg);
+    m_buf.unlock();   ///////
+    con.notify_one();  // 唤醒作用于process线程中的获取观测值数据的函数
+}
+
 
 /**************** UI View Controler ****************/
 - (void)showInputView
@@ -1791,16 +1824,16 @@ vector<IMU_MSG> gyro_buf;  // for Interpolation
 
 - (IBAction)loopButtonPressed:(id)sender
 {
-    if (LOOP_CLOSURE)
-    {
-        LOOP_CLOSURE = false;
-        [_loopButton setTitle:@"ENLOOP" forState:UIControlStateNormal];
-    }
-    else
-    {
-        LOOP_CLOSURE = true;
-        [_loopButton setTitle:@"UNLOOP" forState:UIControlStateNormal];
-    }
+//    if (LOOP_CLOSURE)
+//    {
+//        LOOP_CLOSURE = false;
+//        [_loopButton setTitle:@"ENLOOP" forState:UIControlStateNormal];
+//    }
+//    else
+//    {
+//        LOOP_CLOSURE = true;
+//        [_loopButton setTitle:@"UNLOOP" forState:UIControlStateNormal];
+//    }
     /*
      start_record = !start_record;
      if(start_record)
