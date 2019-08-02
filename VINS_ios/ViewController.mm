@@ -1344,8 +1344,8 @@ IMU_MSG gyr_buf[3];
                                -latestAcc.acceleration.y * GRAVITY,
                                -latestAcc.acceleration.z * GRAVITY;
              
-             printf("+++ imu ACC Empty update【%lf】   %lf %lf %lf \n",
-                    acc_buf[0].header, acc_buf[0].acc.x(), acc_buf[0].acc.y(), acc_buf[0].acc.z());
+//             printf("+++ imu ACC Empty update【%lf】   %lf %lf %lf \n",
+//                    acc_buf[0].header, acc_buf[0].acc.x(), acc_buf[0].acc.y(), acc_buf[0].acc.z());
          }
          else if (acc_buf[2].header > 0)   // buf 已满，将buf中的值前移，丢弃buf[0]
          {
@@ -1355,8 +1355,8 @@ IMU_MSG gyr_buf[3];
              acc_buf[2].acc << -latestAcc.acceleration.x * GRAVITY,
                                -latestAcc.acceleration.y * GRAVITY,
                                -latestAcc.acceleration.z * GRAVITY;
-             printf("+++ imu ACC Full  update【%lf】   %lf %lf %lf \n",
-                    acc_buf[1].header, acc_buf[1].acc.x(), acc_buf[1].acc.y(), acc_buf[0].acc.z());
+//             printf("+++ imu ACC Full  update【%lf】   %lf %lf %lf \n",
+//                    acc_buf[1].header, acc_buf[1].acc.x(), acc_buf[1].acc.y(), acc_buf[1].acc.z());
          }
          else if (acc_buf[1].header > 0)   // buf[2]无值，新值追加到buf[2]
          {
@@ -1364,17 +1364,17 @@ IMU_MSG gyr_buf[3];
              acc_buf[2].acc << -latestAcc.acceleration.x * GRAVITY,
                                -latestAcc.acceleration.y * GRAVITY,
                                -latestAcc.acceleration.z * GRAVITY;
-             printf("+++ imu ACC Half-1  update【%lf】   %lf %lf %lf \n",
-                    acc_buf[1].header, acc_buf[1].acc.x(), acc_buf[1].acc.y(), acc_buf[0].acc.z());
+//             printf("+++ imu ACC Half-1  update【%lf】   %lf %lf %lf \n",
+//                    acc_buf[2].header, acc_buf[2].acc.x(), acc_buf[2].acc.y(), acc_buf[2].acc.z());
          }
-         else if (acc_buf[0].header > 0) // 只有buf[0]有值，新值追加到buf[1]
+         else if (acc_buf[0].header > 0)   // 只有buf[0]有值，新值追加到buf[1]
          {
              acc_buf[1].header = latestAcc.timestamp;
              acc_buf[1].acc << -latestAcc.acceleration.x * GRAVITY,
                                -latestAcc.acceleration.y * GRAVITY,
                                -latestAcc.acceleration.z * GRAVITY;
-             printf("+++ imu ACC Half-0  update【%lf】   %lf %lf %lf \n",
-                    acc_buf[1].header, acc_buf[1].acc.x(), acc_buf[1].acc.y(), acc_buf[0].acc.z());
+//             printf("+++ imu ACC Half-0  update【%lf】   %lf %lf %lf \n",
+//                    acc_buf[1].header, acc_buf[1].acc.x(), acc_buf[1].acc.y(), acc_buf[1].acc.z());
          }
          
          m_buf.unlock();   //////
@@ -1409,8 +1409,8 @@ IMU_MSG gyr_buf[3];
                              latestGyro.rotationRate.y,
                              latestGyro.rotationRate.z;
 
-         printf("+++ imu Gyr  update【%lf】   %lf %lf %lf \n",
-                gyr_buf[2].header, gyr_buf[2].gyr.x(), gyr_buf[2].gyr.y(), gyr_buf[2].gyr.z());
+//         printf("+++ imu Gyr  update【%lf】   %lf %lf %lf \n",
+//                gyr_buf[2].header, gyr_buf[2].gyr.x(), gyr_buf[2].gyr.y(), gyr_buf[2].gyr.z());
          
          m_buf.unlock();   //////
 
@@ -1462,23 +1462,23 @@ void sync_imu()
     }
     
     // TODO: For test
-    if (imu_msg->header > lateast_imu_time + 0.013 && lateast_imu_time > 0)
-    {
-        printf("xxx IMU interval[%lf] (%lf: %lf - %lf - %lf)\n",
-               (imu_msg->header - lateast_imu_time), imu_msg->header, gyr_buf[0].header, gyr_buf[1].header, gyr_buf[2].header);
-    }
-    
-    // TODO: For test
-    if (imu_msg->header - lateast_imu_time > max_interval && lateast_imu_time > 0)
-    {
-        max_interval = imu_msg->header - lateast_imu_time;
-    }
-    printf("------ max_interval【%lf】\n", max_interval);
-    
-    printf("------ IMU_MSG【%lf】  acc:[%lf %lf %lf]  gyr:[%lf %lf %lf] \n\n",
-           imu_msg->header,
-           imu_msg->acc.x(), imu_msg->acc.y(), imu_msg->acc.z(),
-           imu_msg->gyr.x(), imu_msg->gyr.y(), imu_msg->gyr.z());
+//    if (imu_msg->header > lateast_imu_time + 0.013 && lateast_imu_time > 0)
+//    {
+//        printf("xxx IMU interval[%lf] (%lf: %lf - %lf - %lf)\n",
+//               (imu_msg->header - lateast_imu_time), imu_msg->header, gyr_buf[0].header, gyr_buf[1].header, gyr_buf[2].header);
+//    }
+//
+//    // TODO: For test
+//    if (imu_msg->header - lateast_imu_time > max_interval && lateast_imu_time > 0)
+//    {
+//        max_interval = imu_msg->header - lateast_imu_time;
+//    }
+//    printf("------ max_interval【%lf】\n", max_interval);
+//
+//    printf("------ IMU_MSG【%lf】  acc:[%lf %lf %lf]  gyr:[%lf %lf %lf] \n\n",
+//           imu_msg->header,
+//           imu_msg->acc.x(), imu_msg->acc.y(), imu_msg->acc.z(),
+//           imu_msg->gyr.x(), imu_msg->gyr.y(), imu_msg->gyr.z());
     
     lateast_imu_time = imu_msg->header;
     
