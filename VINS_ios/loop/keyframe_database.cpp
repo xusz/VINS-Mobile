@@ -6,7 +6,7 @@
 //  Copyright © 2017 HKUST Aerial Robotics. All rights reserved.
 //
 
-#include "keyfame_database.h"
+#include "keyframe_database.h"
 
 KeyFrameDatabase::KeyFrameDatabase()
 {

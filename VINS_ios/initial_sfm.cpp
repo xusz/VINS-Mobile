@@ -1,4 +1,5 @@
 #include "inital_sfm.hpp"
+#include "global_param.hpp"
 
 GlobalSFM::GlobalSFM(){}
 
@@ -393,7 +394,6 @@ bool GlobalSFM::construct(int frame_num,
     ceres::Problem problem;
     ceres::LocalParameterization* local_parameterization = new ceres::QuaternionParameterization();
     
-    // cout << " begin full BA " << endl;
     for (int i = 0; i < frame_num; i++)
     {
         // double array for ceres
@@ -438,17 +438,21 @@ bool GlobalSFM::construct(int frame_num,
         }
     }
     
+    TS(SFM_ceres);
+    
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;  // 舒尔补
     // options.minimizer_progress_to_stdout = true;
-    options.max_solver_time_in_seconds = 0.3;
+    options.max_solver_time_in_seconds = 0.5;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     
-    std::cout << summary.BriefReport() << "\n";
+    std::cout << "SFM -- " << summary.BriefReport() << "\n";
     
+    TE(SFM_ceres);
+
     if (summary.termination_type == ceres::CONVERGENCE
-        || summary.final_cost < 3e-03)
+        || summary.final_cost < 5e-03)
     {
 //        cout << "vision only BA converge" << endl;
     }
