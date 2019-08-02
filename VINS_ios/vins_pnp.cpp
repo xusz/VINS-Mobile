@@ -413,7 +413,7 @@ void vinsPnP::solve_ceres()
     
     ceres::Solver::Summary summary;
     TS(ceres_pnp);
-    printf("solve pnp\n");
+//    printf("solve pnp\n");
     ceres::Solve(options, &problem, &summary);
     TE(ceres_pnp);
     

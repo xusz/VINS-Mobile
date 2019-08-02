@@ -35,7 +35,7 @@ void VINS::setIMUModel()
 void VINS::clearState()
 {
     printf("clear state\n");
-    for (int i = 0; i < 10 * (WINDOW_SIZE + 1); i++)
+    for (int i = 0; i < (WINDOW_SIZE + 1); i++)
     {
         Rs[i].setIdentity();
         Ps[i].setZero();
@@ -44,7 +44,6 @@ void VINS::clearState()
         Bgs[i].setZero();
         IMU_linear[i].setZero();
         IMU_angular[i].setIdentity();
-//        pre_integrations[i] = nullptr;
         dt_buf[i].clear();
         linear_acceleration_buf[i].clear();
         angular_velocity_buf[i].clear();
@@ -54,7 +53,6 @@ void VINS::clearState()
             delete pre_integrations[i];
             pre_integrations[i] = nullptr;
         }
-//        pre_integrations[i] = nullptr;
     }
     
     tic << TIC_X, TIC_Y, TIC_Z;
@@ -78,8 +76,6 @@ void VINS::clearState()
         last_marginalization_info = nullptr;
     }
     
-//    tmp_pre_integration = nullptr;
-//    last_marginalization_info = nullptr;
     last_marginalization_parameter_blocks.clear();
     
     f_manager.clearState();
@@ -163,7 +159,6 @@ void VINS::new2old()
                                                      para_Pose[0][5]).toRotationMatrix());
     
     double y_diff = origin_R0.x() - origin_R00.x();
-    // TODO:
     Matrix3d rot_diff = Utility::ypr2R(Vector3d(y_diff, 0, 0));
     
     for (int i = 0; i <= WINDOW_SIZE; i++)
@@ -481,7 +476,7 @@ void VINS::processImage(map<int, Vector3d> &image_msg,
                         int buf_num)
 {
     int track_num = 0;  // 相邻帧跟踪到的特征点数
-    printf("adding feature points %lu\n", image_msg.size());
+//    printf("adding feature points %lu\n", image_msg.size());
     
     // 对相近的特征点进行视差计算
     /* 通过检测两帧之间的视差决定是否作为关键帧，
@@ -678,10 +673,11 @@ void VINS::solve_ceres(int buf_num)
         problem.SetParameterBlockConstant(para_Ex_Pose[i]);
     }
     
-    for (int i = 0; i < NUM_OF_F; i++)
-    {
-        problem.AddParameterBlock(para_Feature[i], SIZE_FEATURE);
-    }
+    // TODO: Fusion 上没有这行
+//    for (int i = 0; i < NUM_OF_F; i++)
+//    {
+//        problem.AddParameterBlock(para_Feature[i], SIZE_FEATURE);
+//    }
     
     // 数据类型转换，Ps,Rs 转换为 para_Pose
     // Vs,Bas,Bgs 转换为 para_SpeedBias
@@ -774,20 +770,21 @@ void VINS::solve_ceres(int buf_num)
             
             f_m_cnt++;
             
-            double **para = new double *[4];
-            para[0] = para_Pose[imu_i];
-            para[1] = para_Pose[imu_j];
-            para[2] = para_Ex_Pose[0];
-            para[3] = para_Feature[feature_index];
-            double *res = new double[2];
-            
-            // 计算残差
-            f->Evaluate(para, res, NULL);
-            f_sum += sqrt(res[0] * res[0] + res[1] * res[1]);
-            
-            double rho[3];
-            loss_function->Evaluate(res[0] * res[0] + res[1] * res[1], rho);
-            r_f_sum += rho[0];
+            // TODO: Fusion 上没有这部分代码
+//            double **para = new double *[4];
+//            para[0] = para_Pose[imu_i];
+//            para[1] = para_Pose[imu_j];
+//            para[2] = para_Ex_Pose[0];
+//            para[3] = para_Feature[feature_index];
+//            double *res = new double[2];
+//
+//            // 计算残差
+//            f->Evaluate(para, res, NULL);
+//            f_sum += sqrt(res[0] * res[0] + res[1] * res[1]);
+//
+//            double rho[3];
+//            loss_function->Evaluate(res[0] * res[0] + res[1] * res[1], rho);
+//            r_f_sum += rho[0];
         }
     }
     
@@ -891,13 +888,13 @@ void VINS::solve_ceres(int buf_num)
     // 设置 ceres 属性
     ceres::Solver::Options options;
     
-    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.linear_solver_type = ceres::DENSE_SCHUR;  // ceres::DENSE_SCHUR;
     options.num_threads = 1;
     options.trust_region_strategy_type = ceres::DOGLEG;
-    options.use_explicit_schur_complement = true;
+    options.use_explicit_schur_complement = false;
     options.minimizer_progress_to_stdout = false;
     // # max solver itrations, to guarantee real time
-    options.max_num_iterations = 10;
+    options.max_num_iterations = 20;
     // options.use_nonmonotonic_steps = true;
     
     // 最大求解时间
@@ -911,7 +908,7 @@ void VINS::solve_ceres(int buf_num)
     }
     else  // >= 4
     {
-        options.max_solver_time_in_seconds = SOLVER_TIME / 2.0;
+        options.max_solver_time_in_seconds = 0.3; // SOLVER_TIME / 2.0;
     }
     
     ceres::Solver::Summary summary;
@@ -922,49 +919,65 @@ void VINS::solve_ceres(int buf_num)
      * Jacobian数组里每一项都是IMU误差关于两帧图像状态的导数，只不过这里把pose和speedBias分开了
      */
     TS(ceres);
-//    printf("ceres::Solve \n");
     // 约束求解
     ceres::Solve(options, &problem, &summary);
     final_cost = summary.final_cost;
-    // cout << summary.FullReport() << endl;
+    cout << summary.FullReport() << endl;
     TE(ceres);
+    
+    /**
+     Time (in seconds):
+     Preprocessor                           0.0055
+     
+     Residual evaluation                  0.0355
+     Jacobian evaluation                  0.2936
+     Linear solver                        0.0175
+     Minimizer                              0.3486
+     
+     Postprocessor                          0.0002
+     Total                                  0.3542
+     
+     Termination:                   NO_CONVERGENCE (Maximum solver time reached. Total solver time: 3.538249e-01 >= 3.000000e-01.)
+     
+     ----- Jacobian evaluation  耗时最长
+     */
     
     /*****************优化后的内容********************/
     //！求解两个闭环帧之间的关系
     // relative info between two loop frame
-    if (LOOP_CLOSURE)
-    {
-        for (int i = 0; i< WINDOW_SIZE; i++)
-        {
-            //！闭环检测成功
-            if (front_pose.header == Headers[i])
-            {
-                // 四元数
-                Matrix3d Rs_i = Quaterniond(para_Pose[i][6],
-                                            para_Pose[i][3],
-                                            para_Pose[i][4],
-                                            para_Pose[i][5]).normalized().toRotationMatrix();
-                
-                Vector3d Ps_i = Vector3d(para_Pose[i][0],
-                                         para_Pose[i][1],
-                                         para_Pose[i][2]);
-                
-                Matrix3d Rs_loop = Quaterniond(front_pose.loop_pose[6],
-                                               front_pose.loop_pose[3],
-                                               front_pose.loop_pose[4],
-                                               front_pose.loop_pose[5]).normalized().toRotationMatrix();
-                
-                Vector3d Ps_loop = Vector3d(front_pose.loop_pose[0],
-                                            front_pose.loop_pose[1],
-                                            front_pose.loop_pose[2]);
-                
-                front_pose.relative_t = Rs_loop.transpose() * (Ps_i - Ps_loop);
-                front_pose.relative_q = Rs_loop.transpose() * Rs_i;
-                front_pose.relative_yaw = Utility::normalizeAngle(Utility::R2ypr(Rs_i).x()
-                                                                - Utility::R2ypr(Rs_loop).x());
-            }
-        }
-    }
+//    if (LOOP_CLOSURE)
+//    {
+//        for (int i = 0; i< WINDOW_SIZE; i++)
+//        {
+//            //！闭环检测成功
+//            if (front_pose.header == Headers[i])
+//            {
+//                // 四元数
+//                Matrix3d Rs_i = Quaterniond(para_Pose[i][6],
+//                                            para_Pose[i][3],
+//                                            para_Pose[i][4],
+//                                            para_Pose[i][5]).normalized().toRotationMatrix();
+//
+//                Vector3d Ps_i = Vector3d(para_Pose[i][0],
+//                                         para_Pose[i][1],
+//                                         para_Pose[i][2]);
+//
+//                Matrix3d Rs_loop = Quaterniond(front_pose.loop_pose[6],
+//                                               front_pose.loop_pose[3],
+//                                               front_pose.loop_pose[4],
+//                                               front_pose.loop_pose[5]).normalized().toRotationMatrix();
+//
+//                Vector3d Ps_loop = Vector3d(front_pose.loop_pose[0],
+//                                            front_pose.loop_pose[1],
+//                                            front_pose.loop_pose[2]);
+//
+//                front_pose.relative_t = Rs_loop.transpose() * (Ps_i - Ps_loop);
+//                front_pose.relative_q = Rs_loop.transpose() * Rs_i;
+//                front_pose.relative_yaw = Utility::normalizeAngle(Utility::R2ypr(Rs_i).x()
+//                                                                - Utility::R2ypr(Rs_loop).x());
+//            }
+//        }
+//    }
     
     // （猜测）ceres::Solve 将待优化参数para_* 优化完毕后，赋值给PVQ等
     new2old();
@@ -1410,7 +1423,6 @@ bool VINS::solveInitial()
     map<int, Vector3d>::iterator it;
     frame_it = all_image_frame.begin( );
     
-    // TODO: 此处的 i 有点诡异，作用是什么？
     for (int i = 0; frame_it != all_image_frame.end(); frame_it++)
     {
         // provide initial guess
@@ -1572,7 +1584,7 @@ bool VINS::visualInitialAlign()
     }
     
     TE(solve_g);
-    printf("init PS algnment succ: %lf %lf %lf\n", Ps[0].x(), Ps[0].y(), Ps[0].z());
+//    printf("init PS algnment succ: %lf %lf %lf\n", Ps[0].x(), Ps[0].y(), Ps[0].z());
     
     // change state
     for (int i = 0; i <= frame_count; i++)
@@ -1778,9 +1790,8 @@ void VINS::slideWindow()
                 Ps[i].swap(Ps[i + 1]);
                 Vs[i].swap(Vs[i + 1]);
                 
-                // TODO: 此处没有 ba和bg 的swap
-//                Bas[i].swap(Bas[i + 1]);
-//                Bgs[i].swap(Bgs[i + 1]);
+                Bas[i].swap(Bas[i + 1]);
+                Bgs[i].swap(Bgs[i + 1]);
             }
             
             // TODO: 用的是倒数第二个值？？？

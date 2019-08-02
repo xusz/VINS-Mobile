@@ -6,7 +6,7 @@
 //  Copyright © 2017 HKUST Aerial Robotics. All rights reserved.
 //
 
-#include "initial_aligment.hpp"
+#include "initial_alignment.hpp"
 
 /**
  * 根据视觉SFM的结果来估测陀螺仪的Bias，对应论文V-B-1

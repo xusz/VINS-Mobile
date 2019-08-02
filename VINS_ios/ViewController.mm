@@ -979,125 +979,125 @@ bool start_global_optimization = false;
         /**
          ** start build keyframe database for loop closure
          **/
-        if (LOOP_CLOSURE)
-        {
-            static bool first_frame = true;
-            if (vins.solver_flag != vins.NON_LINEAR)
-            {
-                first_frame = true;
-            }
-            
-            // 如果经过前面检测，x次新帧是关键帧，则将这帧添加到关键帧队列中
-            if (vins.marginalization_flag == vins.MARGIN_OLD
-                && vins.solver_flag == vins.NON_LINEAR
-                && !image_buf_loop.empty())
-            {
-                first_frame = false;
-                
-                if (!first_frame && keyframe_freq % LOOP_FREQ == 0)
-                {
-                    keyframe_freq = 0;
-                    /**
-                     ** save the newest keyframe to the keyframe database
-                     ** only need to save the pose to the keyframe database
-                     **/
-                    Vector3d T_w_i = vins.Ps[WINDOW_SIZE - 2];
-                    Matrix3d R_w_i = vins.Rs[WINDOW_SIZE - 2];
-                    m_image_buf_loop.lock();
-                    
-                    while (!image_buf_loop.empty()
-                           && image_buf_loop.front().second < vins.Headers[WINDOW_SIZE - 2])
-                    {
-                        image_buf_loop.pop();
-                    }
-                    // assert(vins.Headers[WINDOW_SIZE - 2] == image_buf_loop.front().second);
-                    
-                    if (vins.Headers[WINDOW_SIZE - 2] == image_buf_loop.front().second)
-                    {
-                        const char *pattern_file = [[[NSBundle bundleForClass:[self class]] pathForResource:@"brief_pattern" ofType:@"yml"] cStringUsingEncoding:[NSString defaultCStringEncoding]];
-                        
-                        KeyFrame* keyframe = new KeyFrame(vins.Headers[WINDOW_SIZE - 2],
-                                                          global_frame_cnt,
-                                                          T_w_i, R_w_i,
-                                                          image_buf_loop.front().first,
-                                                          pattern_file,
-                                                          keyframe_database.cur_seg_index);
-                        // 设置IMU与camera的外参
-                        keyframe->setExtrinsic(vins.tic, vins.ric);
-                       
-                        /**
-                         ** we still need save the measurement to the keyframe(not database) for add connection with looped old pose
-                         ** and save the pointcloud to the keyframe for reprojection search correspondance
-                         */
-                        // 将空间的3D点构建当前关键帧的特征点
-                        keyframe->buildKeyFrameFeatures(vins);
-                        // 添加到关键帧队列中
-                        keyframe_database.add(keyframe);
-                        
-                        global_frame_cnt++;
-                    }
-                    m_image_buf_loop.unlock();
-                }
-                else
-                {
-                    first_frame = false;
-                }
-                
-                // update loop info  检查闭环是否出错
-                for (int i = 0; i < WINDOW_SIZE; i++)
-                {
-                    if (vins.Headers[i] == vins.front_pose.header)
-                    {
-                        KeyFrame* cur_kf = keyframe_database.getKeyframe(vins.front_pose.cur_index);
-                        
-                        // 两个匹配帧之间yaw角度过大或者是平移量过大，则认为是匹配错误，移除此次闭环匹配
-                        if (abs(vins.front_pose.relative_yaw) > 30.0
-                            || vins.front_pose.relative_t.norm() > 10.0)
-                        {
-                            printf("Wrong loop\n");
-                            cur_kf->removeLoop();
-                            break;
-                        }
-                        
-                        cur_kf->updateLoopConnection(vins.front_pose.relative_t,
-                                                     vins.front_pose.relative_q,
-                                                     vins.front_pose.relative_yaw);
-                        break;
-                    }
-                }
-                
-                /*
-                 ** update the keyframe pose when this frame slides out the window and optimize loop graph
-                 */
-                int search_cnt = 0;
-                for (int i = 0; i < keyframe_database.size(); i++)
-                {
-                    search_cnt++;
-                    KeyFrame* kf = keyframe_database.getLastKeyframe(i);
-                    if (kf->header == vins.Headers[0])
-                    {
-                        kf->updateOriginPose(vins.Ps[0], vins.Rs[0]);
-                        
-                        // update edge
-                        // if loop happens in this frame, update pose graph;
-                        if (kf->has_loop)
-                        {
-                            kf_global_index = kf->global_index;
-                            start_global_optimization = true;
-                        }
-                        break;
-                    }
-                    else
-                    {
-                        if (search_cnt > 2 * WINDOW_SIZE)
-                        {
-                            break;
-                        }
-                    }
-                }
-                keyframe_freq++;
-            }
-        }
+//        if (LOOP_CLOSURE)
+//        {
+//            static bool first_frame = true;
+//            if (vins.solver_flag != vins.NON_LINEAR)
+//            {
+//                first_frame = true;
+//            }
+//
+//            // 如果经过前面检测，x次新帧是关键帧，则将这帧添加到关键帧队列中
+//            if (vins.marginalization_flag == vins.MARGIN_OLD
+//                && vins.solver_flag == vins.NON_LINEAR
+//                && !image_buf_loop.empty())
+//            {
+//                first_frame = false;
+//
+//                if (!first_frame && keyframe_freq % LOOP_FREQ == 0)
+//                {
+//                    keyframe_freq = 0;
+//                    /**
+//                     ** save the newest keyframe to the keyframe database
+//                     ** only need to save the pose to the keyframe database
+//                     **/
+//                    Vector3d T_w_i = vins.Ps[WINDOW_SIZE - 2];
+//                    Matrix3d R_w_i = vins.Rs[WINDOW_SIZE - 2];
+//                    m_image_buf_loop.lock();
+//
+//                    while (!image_buf_loop.empty()
+//                           && image_buf_loop.front().second < vins.Headers[WINDOW_SIZE - 2])
+//                    {
+//                        image_buf_loop.pop();
+//                    }
+//                    // assert(vins.Headers[WINDOW_SIZE - 2] == image_buf_loop.front().second);
+//
+//                    if (vins.Headers[WINDOW_SIZE - 2] == image_buf_loop.front().second)
+//                    {
+//                        const char *pattern_file = [[[NSBundle bundleForClass:[self class]] pathForResource:@"brief_pattern" ofType:@"yml"] cStringUsingEncoding:[NSString defaultCStringEncoding]];
+//
+//                        KeyFrame* keyframe = new KeyFrame(vins.Headers[WINDOW_SIZE - 2],
+//                                                          global_frame_cnt,
+//                                                          T_w_i, R_w_i,
+//                                                          image_buf_loop.front().first,
+//                                                          pattern_file,
+//                                                          keyframe_database.cur_seg_index);
+//                        // 设置IMU与camera的外参
+//                        keyframe->setExtrinsic(vins.tic, vins.ric);
+//
+//                        /**
+//                         ** we still need save the measurement to the keyframe(not database) for add connection with looped old pose
+//                         ** and save the pointcloud to the keyframe for reprojection search correspondance
+//                         */
+//                        // 将空间的3D点构建当前关键帧的特征点
+//                        keyframe->buildKeyFrameFeatures(vins);
+//                        // 添加到关键帧队列中
+//                        keyframe_database.add(keyframe);
+//
+//                        global_frame_cnt++;
+//                    }
+//                    m_image_buf_loop.unlock();
+//                }
+//                else
+//                {
+//                    first_frame = false;
+//                }
+//
+//                // update loop info  检查闭环是否出错
+//                for (int i = 0; i < WINDOW_SIZE; i++)
+//                {
+//                    if (vins.Headers[i] == vins.front_pose.header)
+//                    {
+//                        KeyFrame* cur_kf = keyframe_database.getKeyframe(vins.front_pose.cur_index);
+//
+//                        // 两个匹配帧之间yaw角度过大或者是平移量过大，则认为是匹配错误，移除此次闭环匹配
+//                        if (abs(vins.front_pose.relative_yaw) > 30.0
+//                            || vins.front_pose.relative_t.norm() > 10.0)
+//                        {
+//                            printf("Wrong loop\n");
+//                            cur_kf->removeLoop();
+//                            break;
+//                        }
+//
+//                        cur_kf->updateLoopConnection(vins.front_pose.relative_t,
+//                                                     vins.front_pose.relative_q,
+//                                                     vins.front_pose.relative_yaw);
+//                        break;
+//                    }
+//                }
+//
+//                /*
+//                 ** update the keyframe pose when this frame slides out the window and optimize loop graph
+//                 */
+//                int search_cnt = 0;
+//                for (int i = 0; i < keyframe_database.size(); i++)
+//                {
+//                    search_cnt++;
+//                    KeyFrame* kf = keyframe_database.getLastKeyframe(i);
+//                    if (kf->header == vins.Headers[0])
+//                    {
+//                        kf->updateOriginPose(vins.Ps[0], vins.Rs[0]);
+//
+//                        // update edge
+//                        // if loop happens in this frame, update pose graph;
+//                        if (kf->has_loop)
+//                        {
+//                            kf_global_index = kf->global_index;
+//                            start_global_optimization = true;
+//                        }
+//                        break;
+//                    }
+//                    else
+//                    {
+//                        if (search_cnt > 2 * WINDOW_SIZE)
+//                        {
+//                            break;
+//                        }
+//                    }
+//                }
+//                keyframe_freq++;
+//            }
+//        }
         
         TE(_______time_process_each________);
         

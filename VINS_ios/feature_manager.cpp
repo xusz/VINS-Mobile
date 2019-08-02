@@ -19,48 +19,48 @@ FeatureManager::FeatureManager(Matrix3d _Rs[])
     ric = Utility::ypr2R(Vector3d(RIC_y, RIC_p, RIC_r));
 }
 
-double FeatureManager::compensatedParallax1(FeaturePerId &f_per_id)
-{
-    int l = (int)f_per_id.feature_per_frame.size();
-    FeaturePerFrame &frame_i = f_per_id.feature_per_frame[0];
-    FeaturePerFrame &frame_j = f_per_id.feature_per_frame[l - 1];
-    
-    int r_i = f_per_id.start_frame + 0;
-    int r_j = f_per_id.start_frame + l - 1;
-    
-    Vector3d p_i = frame_i.point;
-    
-    double u_i = p_i(0);
-    double v_i = p_i(1);
-    
-    double ans = 0;
-    
-    Vector3d p_j = frame_j.point;
-    Vector3d p_j_comp;
-    p_j_comp = ric.transpose() * Rs[r_i].transpose() * Rs[r_j] * ric * p_j;
-    
-    double dep_j = p_j(2);
-    double u_j = p_j(0) / dep_j;
-    double v_j = p_j(1) / dep_j;
-    
-    double du = u_i - u_j, dv = v_i - v_j;
-    double dep_j_comp = p_j_comp(2);
-    double u_j_comp = p_j_comp(0) / dep_j_comp;
-    double v_j_comp = p_j_comp(1) / dep_j_comp;
-    double du_comp = u_i - u_j_comp, dv_comp = v_i - v_j_comp;
-    
-    double para = sqrt(min(du * du + dv * dv, du_comp * du_comp + dv_comp * dv_comp));
-    
-    frame_j.parallax = para;
-    
-    if (r_i == r_j) //the feature appeared first time
-    {
-        para = 1e-3;
-    }
-    ans = max(ans, para);
-    
-    return ans;
-}
+//double FeatureManager::compensatedParallax1(FeaturePerId &f_per_id)
+//{
+//    int l = (int)f_per_id.feature_per_frame.size();
+//    FeaturePerFrame &frame_i = f_per_id.feature_per_frame[0];
+//    FeaturePerFrame &frame_j = f_per_id.feature_per_frame[l - 1];
+//
+//    int r_i = f_per_id.start_frame + 0;
+//    int r_j = f_per_id.start_frame + l - 1;
+//
+//    Vector3d p_i = frame_i.point;
+//
+//    double u_i = p_i(0);
+//    double v_i = p_i(1);
+//
+//    double ans = 0;
+//
+//    Vector3d p_j = frame_j.point;
+//    Vector3d p_j_comp;
+//    p_j_comp = ric.transpose() * Rs[r_i].transpose() * Rs[r_j] * ric * p_j;
+//
+//    double dep_j = p_j(2);
+//    double u_j = p_j(0) / dep_j;
+//    double v_j = p_j(1) / dep_j;
+//
+//    double du = u_i - u_j, dv = v_i - v_j;
+//    double dep_j_comp = p_j_comp(2);
+//    double u_j_comp = p_j_comp(0) / dep_j_comp;
+//    double v_j_comp = p_j_comp(1) / dep_j_comp;
+//    double du_comp = u_i - u_j_comp, dv_comp = v_i - v_j_comp;
+//
+//    double para = sqrt(min(du * du + dv * dv, du_comp * du_comp + dv_comp * dv_comp));
+//
+//    frame_j.parallax = para;
+//
+//    if (r_i == r_j) //the feature appeared first time
+//    {
+//        para = 1e-3;
+//    }
+//    ans = max(ans, para);
+//
+//    return ans;
+//}
 
 /**
  * 对于给定id的特征点
@@ -134,6 +134,8 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count,
     double parallax_sum = 0;  // 第2最新帧和第3最新帧之间跟踪到的特征点的总视差
     parallax_num = 0;         // 第2最新帧和第3最新帧之间跟踪到的特征点的数量(满足某些条件的特征点个数)
     last_track_num = 0;       // 当前帧（第1最新帧）图像跟踪到的特征点的数量
+    int new_feature_num = 0;
+    int long_track_num = 0;   // 某个特征点至少被4个关键帧观测到，认为是 long_track
     
     // 每个feature有可能出现多个帧中，share same id，放入feature容器中
     // feature容器按照特征点id组织特征点数据，对于每个id的特征点，
@@ -157,6 +159,7 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count,
             feature.push_back(FeaturePerId(feature_id, frame_count));
             // give point
             feature.back().feature_per_frame.push_back(f_per_fra);
+            new_feature_num++;
         }
         // find match with previous feature
         else if (it->feature_id == feature_id)
@@ -165,16 +168,21 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count,
             // 然后增加last_track_num，说明此帧有多少个相同特征点被跟踪到
             it->feature_per_frame.push_back(f_per_fra);
             last_track_num ++;   // 当前帧（第1最新帧）图像跟踪到的特征点的数量
+            if (it->feature_per_frame.size() >= 4)
+                long_track_num++;
         }
     }
     
     // 1. 当前帧的帧号小于2，即为0或1，为0，则没有第2最新帧，为1，则第2最新帧是滑动窗口中的第1帧
     // 2. 当前帧（第1最新帧）跟踪到的特征点数量小于20（？？？为什么当前帧的跟踪质量不好，就把第2最新帧当作关键帧？？？）
     // 出现以上2种情况的任意一种，则认为第2最新帧是关键帧
-    if (frame_count < 2 || last_track_num < 20)
-    {
-        return true;   // 第2最新帧是关键帧
-    }
+    //if (frame_count < 2 || last_track_num < 20)
+    //if (frame_count < 2 || last_track_num < 20 || new_feature_num > 0.5 * last_track_num)
+    /* 关键帧数小于2 跟踪到角点数目小于20 连续被跟踪小于40帧 当前帧加入角点记录列表的数目大于跟踪到角点数目的一半(当前帧出现新的视野较多)
+     * 以上4条件满足一则插入滑动窗口关键帧
+     */
+    if (frame_count < 2 || last_track_num < 20 || long_track_num < 40 || new_feature_num > 0.5 * last_track_num)
+        return true;
     
     // 计算视差，second last和third last
     // 计算第2最新帧和第3最新帧之间跟踪到的特征点的平均视差
@@ -192,8 +200,8 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count,
         }
     }
     
-    printf("parallax sum = %lf parallax_num = %d\n",
-           parallax_sum, parallax_num);
+//    printf("parallax sum = %lf parallax_num = %d\n",
+//           parallax_sum, parallax_num);
     
     if (parallax_num == 0)
     {
@@ -241,6 +249,7 @@ FeatureManager::getCorresponding(int frame_count_l,
     return corres;
 }
 
+// TODO: 不一致
 void FeatureManager::clearDepth(const VectorXd &x)
 {
     int feature_index = -1;
@@ -257,6 +266,7 @@ void FeatureManager::clearDepth(const VectorXd &x)
     }
 }
 
+// TODO: 不一致
 void FeatureManager::triangulate(Vector3d Ps[],
                                  Vector3d tic,
                                  Matrix3d ric,
@@ -371,6 +381,7 @@ void FeatureManager::removeBackShiftDepth(Eigen::Matrix3d marg_R,
             if (it->feature_per_frame.size() < 2)
             {
                 feature.erase(it);
+                //                continue;   // TODO: 不一致
             }
             else
             {
@@ -433,6 +444,7 @@ int FeatureManager::getFeatureCount()
     {
         it.used_num = (int)it.feature_per_frame.size();
         
+        // TOOD: 不一致
         if (it.used_num >= 2  && it.start_frame < WINDOW_SIZE - 2)
         {
             sum++;
@@ -459,11 +471,6 @@ void FeatureManager::setDepth(const VectorXd &x)
         }
         
         it_per_id.estimated_depth = 1.0 / x(++feature_index);
-        
-        // ROS_INFO("feature id %d , start_frame %d, depth %f ",
-        //          it_per_id->feature_id,
-        //          it_per_id-> start_frame,
-        //          it_per_id->estimated_depth);
         
         if (it_per_id.estimated_depth < 0)
         {

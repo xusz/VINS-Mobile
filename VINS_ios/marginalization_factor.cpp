@@ -93,7 +93,7 @@ MarginalizationInfo::~MarginalizationInfo()
          it != parameter_block_data.end();
          ++it)
     {
-        delete it->second;
+        delete it->second;  // TODO: 与Mono不一致
     }
     
     for (int i = 0; i < (int)factors.size(); i++)
@@ -256,8 +256,14 @@ void MarginalizationInfo::marginalize()
     
     keepParamCnt_n = pos - margParamCnt_m;
     
-    printf("marginalization, pos: %d, m: %d, n: %d, size: %d",
-           pos, margParamCnt_m, keepParamCnt_n, (int)parameter_block_idx.size());
+//    printf("marginalization, pos: %d, m: %d, n: %d, size: %d",
+//           pos, margParamCnt_m, keepParamCnt_n, (int)parameter_block_idx.size());
+    if(margParamCnt_m == 0)
+    {
+//        valid = false;
+        printf("unstable tracking......\n");
+        return;
+    }
     
     Eigen::MatrixXd A(pos, pos);
     Eigen::VectorXd b(pos);

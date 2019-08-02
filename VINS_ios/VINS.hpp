@@ -20,8 +20,8 @@
 #include "imu_factor.h"
 #include "draw_result.hpp"
 #include <opencv2/core/eigen.hpp>
-#include "inital_sfm.hpp"
-#include "initial_aligment.hpp"
+#include "initial_sfm.hpp"
+#include "initial_alignment.hpp"
 #include "motion_estimator.hpp"
 
 extern bool LOOP_CLOSURE;
@@ -141,12 +141,11 @@ public:
     MarginalizationFlag  marginalization_flag;
     
     // 当前时刻PVQ，此处的计算值 不带noise；两帧frame之间，最多可以存10个IMU数据
-    // TODO: 此处的「10*」是否是有用的？
-    Vector3d Ps[10 * (WINDOW_SIZE + 1)];   // 滑动窗口中各帧在世界坐标系下的位置
-    Vector3d Vs[10 * (WINDOW_SIZE + 1)];   // 滑动窗口中各帧在世界坐标系下的速度
-    Matrix3d Rs[10 * (WINDOW_SIZE + 1)];   // 滑动窗口中各帧在世界坐标系下的旋转
-    Vector3d Bas[10 * (WINDOW_SIZE + 1)];  // 滑动窗口中各帧对应的加速度计偏置
-    Vector3d Bgs[10 * (WINDOW_SIZE + 1)];  // 滑动窗口中各帧对应的陀螺仪偏置
+    Vector3d Ps[(WINDOW_SIZE + 1)];   // 滑动窗口中各帧在世界坐标系下的位置
+    Vector3d Vs[(WINDOW_SIZE + 1)];   // 滑动窗口中各帧在世界坐标系下的速度
+    Matrix3d Rs[(WINDOW_SIZE + 1)];   // 滑动窗口中各帧在世界坐标系下的旋转
+    Vector3d Bas[(WINDOW_SIZE + 1)];  // 滑动窗口中各帧对应的加速度计偏置
+    Vector3d Bgs[(WINDOW_SIZE + 1)];  // 滑动窗口中各帧对应的陀螺仪偏置
     
     /**
      * 用于ceres优化的参数块，待优化参数
@@ -173,26 +172,24 @@ public:
     int feature_num;
     
     // 针对一个滑动窗口的，其中的每个元素保存的都是两帧之间IMU的预积分数据
-    // TODO: 此处不应该「10 *」
-    IntegrationBase *pre_integrations[10 * (WINDOW_SIZE + 1)];
+    IntegrationBase *pre_integrations[(WINDOW_SIZE + 1)];
     bool first_imu;
     // 最近一次接收到的IMU数据，用于下一次IMU积分
     Vector3d acc_0, gyr_0;
     
     /*
      * 滑动窗口中每一帧图像对应的预积分所用到的IMU数据存在3个缓存中
-     * 两帧frame之间，最多可以存10个IMU数据
      */
     // IMU数据对应的时间间隔
-    vector<double> dt_buf[10 * (WINDOW_SIZE + 1)];
+    vector<double> dt_buf[(WINDOW_SIZE + 1)];
     // 加速度计测量值
-    vector<Vector3d> linear_acceleration_buf[10 * (WINDOW_SIZE + 1)];
+    vector<Vector3d> linear_acceleration_buf[(WINDOW_SIZE + 1)];
     // 陀螺仪测量值
-    vector<Vector3d> angular_velocity_buf[10 * (WINDOW_SIZE + 1)];
+    vector<Vector3d> angular_velocity_buf[(WINDOW_SIZE + 1)];
     
-    Matrix<double, 7, 1> IMU_linear[10 * (WINDOW_SIZE + 1)];
-    Matrix3d IMU_angular[10 * (WINDOW_SIZE + 1)];
-    double Headers[10 * (WINDOW_SIZE + 1)];
+    Matrix<double, 7, 1> IMU_linear[(WINDOW_SIZE + 1)];
+    Matrix3d IMU_angular[(WINDOW_SIZE + 1)];
+    double Headers[(WINDOW_SIZE + 1)];
     
     Vector3d g;
     
@@ -208,7 +205,7 @@ public:
     Matrix3d init_R;
     
     SolverFlag solver_flag;
-    Matrix3d Rc[10 * (WINDOW_SIZE + 1)];
+    Matrix3d Rc[(WINDOW_SIZE + 1)];
     
     /*
      * for initialization
